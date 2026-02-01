@@ -98,12 +98,27 @@
     let unsubscribeDb = null;
     let syncStatus = 'offline'; // 'offline' | 'syncing' | 'synced' | 'error'
 
+    // 修復 Firebase 資料格式（空陣列會被存成 null）
+    function sanitizeData(data) {
+      if (!data) return defaultData;
+
+      return {
+        itemLibrary: Array.isArray(data.itemLibrary) ? data.itemLibrary : defaultData.itemLibrary,
+        lists: Array.isArray(data.lists) ? data.lists.map(list => ({
+          ...list,
+          items: Array.isArray(list.items) ? list.items : [],
+          checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : []
+        })) : defaultData.lists,
+        activeListId: data.activeListId || defaultData.activeListId
+      };
+    }
+
     // 從 localStorage 載入（離線備份）
     function loadFromLocal() {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-          return { ...defaultData, ...JSON.parse(saved) };
+          return sanitizeData(JSON.parse(saved));
         }
       } catch (e) {
         console.error('載入本地資料失敗', e);
@@ -149,7 +164,7 @@
       unsubscribeDb = window.firebaseOnValue(userRef, (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          state = { ...defaultData, ...data };
+          state = sanitizeData(data);
           saveToLocal(state);
           syncStatus = 'synced';
         } else {
@@ -227,14 +242,23 @@
     let expandedNotes = [];
 
     function getActiveList() {
-      return state.lists.find(l => l.id === state.activeListId);
+      const lists = state.lists || [];
+      const list = lists.find(l => l.id === state.activeListId);
+      if (!list) return null;
+      // 確保 items 和 checkedItems 是陣列
+      return {
+        ...list,
+        items: Array.isArray(list.items) ? list.items : [],
+        checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : []
+      };
     }
 
     function getListItems() {
       const list = getActiveList();
       if (!list) return [];
-      return list.items
-        .map(id => state.itemLibrary.find(item => item.id === id))
+      const itemLibrary = state.itemLibrary || [];
+      return (list.items || [])
+        .map(id => itemLibrary.find(item => item.id === id))
         .filter(Boolean);
     }
 
