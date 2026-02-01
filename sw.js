@@ -1,9 +1,16 @@
-const CACHE_NAME = 'packing-checklist-v1';
+const CACHE_NAME = 'packing-checklist-v2';
 const urlsToCache = [
   './',
   './index.html',
   './manifest.json',
   'https://cdn.tailwindcss.com'
+];
+
+// Firebase 相關 URL 不要快取（需要即時同步）
+const noCachePatterns = [
+  'firebasedatabase.app',
+  'googleapis.com',
+  'gstatic.com/firebasejs'
 ];
 
 // 安裝 Service Worker
@@ -36,6 +43,14 @@ self.addEventListener('activate', event => {
 
 // 攔截請求
 self.addEventListener('fetch', event => {
+  const url = event.request.url;
+
+  // Firebase 相關請求直接走網路，不快取
+  if (noCachePatterns.some(pattern => url.includes(pattern))) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {

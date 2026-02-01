@@ -11,12 +11,50 @@
   <link rel="apple-touch-icon" href="icon-192.png">
   <title>打包清單</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithPopup, signOut, onAuthStateChanged, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC3tTgAIVm0qz5irkqb7AkjwY7FOMJz4RM",
+      authDomain: "packing-8b3de.firebaseapp.com",
+      databaseURL: "https://packing-8b3de-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "packing-8b3de",
+      storageBucket: "packing-8b3de.firebasestorage.app",
+      messagingSenderId: "109766093944",
+      appId: "1:109766093944:web:35b8d72158750ab522d18d",
+      measurementId: "G-GRY36B729W"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+    const provider = new GoogleAuthProvider();
+
+    // 暴露給全域使用
+    window.firebaseAuth = auth;
+    window.firebaseDb = db;
+    window.googleProvider = provider;
+    window.firebaseSignInWithPopup = signInWithPopup;
+    window.firebaseSignOut = signOut;
+    window.firebaseOnAuthStateChanged = onAuthStateChanged;
+    window.firebaseRef = ref;
+    window.firebaseSet = set;
+    window.firebaseOnValue = onValue;
+
+    // 通知主程式 Firebase 已就緒
+    window.dispatchEvent(new Event('firebase-ready'));
+  </script>
   <style>
     * { -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; display: inline-block; }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -24,7 +62,7 @@
 
   <script>
     // ═══════════════════════════════════════════════════════════════
-    // 資料管理（localStorage）
+    // 資料管理（Firebase Realtime Database）
     // ═══════════════════════════════════════════════════════════════
     const STORAGE_KEY = 'packing-checklist-data';
 
@@ -54,31 +92,135 @@
     const categories = ['必備', '電子產品', '個人物品', '視天氣', '旅行', '運動'];
     const iconOptions = ['📋', '🚶', '💼', '✈️', '🏃', '🎒', '🏖️', '🏕️', '🎯', '🛒'];
 
-    function loadData() {
+    // 用戶狀態
+    let currentUser = null;
+    let firebaseReady = false;
+    let unsubscribeDb = null;
+    let syncStatus = 'offline'; // 'offline' | 'syncing' | 'synced' | 'error'
+
+    // 從 localStorage 載入（離線備份）
+    function loadFromLocal() {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-          const parsed = JSON.parse(saved);
-          return { ...defaultData, ...parsed };
+          return { ...defaultData, ...JSON.parse(saved) };
         }
       } catch (e) {
-        console.error('載入資料失敗', e);
+        console.error('載入本地資料失敗', e);
       }
       return defaultData;
     }
 
-    function saveData(data) {
+    // 儲存到 localStorage（離線備份）
+    function saveToLocal(data) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       } catch (e) {
-        console.error('儲存資料失敗', e);
+        console.error('儲存本地資料失敗', e);
       }
     }
+
+    // 儲存到 Firebase
+    function saveData(data) {
+      saveToLocal(data); // 總是先存本地
+
+      if (currentUser && firebaseReady) {
+        syncStatus = 'syncing';
+        render();
+        const userRef = window.firebaseRef(window.firebaseDb, 'users/' + currentUser.uid);
+        window.firebaseSet(userRef, data)
+          .then(() => {
+            syncStatus = 'synced';
+            render();
+          })
+          .catch(err => {
+            console.error('Firebase 儲存失敗', err);
+            syncStatus = 'error';
+            render();
+          });
+      }
+    }
+
+    // 監聽 Firebase 資料變化
+    function subscribeToFirebase(uid) {
+      if (unsubscribeDb) unsubscribeDb();
+
+      const userRef = window.firebaseRef(window.firebaseDb, 'users/' + uid);
+      unsubscribeDb = window.firebaseOnValue(userRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          state = { ...defaultData, ...data };
+          saveToLocal(state);
+          syncStatus = 'synced';
+        } else {
+          // 雲端沒資料，上傳本地資料
+          saveData(state);
+        }
+        render();
+      }, (error) => {
+        console.error('Firebase 讀取失敗', error);
+        syncStatus = 'error';
+        render();
+      });
+    }
+
+    // Google 登入
+    function handleLogin() {
+      if (!firebaseReady) {
+        alert('Firebase 尚未載入，請稍後再試');
+        return;
+      }
+      window.firebaseSignInWithPopup(window.firebaseAuth, window.googleProvider)
+        .catch(err => {
+          console.error('登入失敗', err);
+          alert('登入失敗：' + err.message);
+        });
+    }
+
+    // 登出
+    function handleLogout() {
+      if (unsubscribeDb) {
+        unsubscribeDb();
+        unsubscribeDb = null;
+      }
+      window.firebaseSignOut(window.firebaseAuth)
+        .then(() => {
+          currentUser = null;
+          syncStatus = 'offline';
+          render();
+        })
+        .catch(err => {
+          console.error('登出失敗', err);
+        });
+    }
+
+    // 初始化 Firebase 認證監聽
+    function initFirebaseAuth() {
+      window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+        currentUser = user;
+        if (user) {
+          subscribeToFirebase(user.uid);
+        } else {
+          syncStatus = 'offline';
+          if (unsubscribeDb) {
+            unsubscribeDb();
+            unsubscribeDb = null;
+          }
+        }
+        render();
+      });
+    }
+
+    // 等待 Firebase 就緒
+    window.addEventListener('firebase-ready', () => {
+      firebaseReady = true;
+      initFirebaseAuth();
+    });
 
     // ═══════════════════════════════════════════════════════════════
     // 應用程式狀態
     // ═══════════════════════════════════════════════════════════════
-    let state = loadData();
+    let state = loadFromLocal();
     let currentView = 'checklist'; // 'checklist' | 'lists' | 'library' | 'addItems'
     let editingItemId = null;
     let editingListId = null;
@@ -243,6 +385,38 @@
       attachEventListeners();
     }
 
+    // 渲染同步狀態圖示
+    function renderSyncStatus() {
+      const statusConfig = {
+        offline: { icon: '○', color: 'text-gray-400', title: '離線模式' },
+        syncing: { icon: '↻', color: 'text-yellow-300 animate-spin', title: '同步中...' },
+        synced: { icon: '●', color: 'text-green-400', title: '已同步' },
+        error: { icon: '!', color: 'text-red-400', title: '同步失敗' }
+      };
+      const status = statusConfig[syncStatus] || statusConfig.offline;
+      return `<span class="${status.color}" title="${status.title}">${status.icon}</span>`;
+    }
+
+    // 渲染用戶區塊
+    function renderUserSection() {
+      if (currentUser) {
+        return `
+          <div class="flex items-center gap-2 px-3 py-2 bg-gray-600 rounded-lg">
+            <img src="${currentUser.photoURL || ''}" alt="" class="w-6 h-6 rounded-full" onerror="this.style.display='none'">
+            <span class="text-sm max-w-[80px] truncate">${currentUser.displayName || currentUser.email}</span>
+            ${renderSyncStatus()}
+            <button onclick="handleLogout()" class="text-xs text-gray-300 hover:text-white ml-1">登出</button>
+          </div>
+        `;
+      }
+      return `
+        <button onclick="handleLogin()" class="flex items-center gap-2 px-3 py-2 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-100">
+          <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          登入
+        </button>
+      `;
+    }
+
     function renderChecklist() {
       const list = getActiveList();
       const items = getListItems();
@@ -255,6 +429,11 @@
         <div class="flex flex-col h-screen">
           <!-- 頂部導航 -->
           <div class="bg-gray-700 text-white px-4 py-3 safe-top">
+            <!-- 用戶狀態列 -->
+            <div class="flex items-center justify-between mb-3">
+              <div class="text-sm text-gray-300">打包清單</div>
+              ${renderUserSection()}
+            </div>
             <div class="flex items-center justify-between">
               <button onclick="currentView='lists'; render();" class="p-2 -ml-2 rounded-lg hover:bg-gray-600">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
