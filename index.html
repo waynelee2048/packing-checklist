@@ -444,7 +444,7 @@
     function renderChecklist() {
       const list = getActiveList();
       const items = getListItems();
-      const checkedCount = list ? list.checkedItems.length : 0;
+      const checkedCount = list ? (list.checkedItems || []).length : 0;
       const totalCount = items.length;
       const allChecked = totalCount > 0 && checkedCount === totalCount;
       const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
@@ -503,7 +503,7 @@
             ` : `
               <div class="space-y-2">
                 ${items.map(item => {
-                  const isChecked = list.checkedItems.includes(item.id);
+                  const isChecked = (list.checkedItems || []).includes(item.id);
                   const hasNote = item.note && item.note.trim();
                   const isNoteExpanded = expandedNotes.includes(item.id);
                   return `
@@ -589,9 +589,9 @@
           <!-- 清單列表 -->
           <div class="flex-1 overflow-y-auto p-4 no-scrollbar">
             <div class="space-y-2">
-              ${state.lists.map(list => {
-                const itemCount = list.items.length;
-                const checkedCount = list.checkedItems.length;
+              ${(state.lists || []).map(list => {
+                const itemCount = (list.items || []).length;
+                const checkedCount = (list.checkedItems || []).length;
                 const isActive = list.id === state.activeListId;
                 return `
                   <div onclick="selectList(${list.id})"
@@ -803,7 +803,7 @@
 
           <!-- 底部 -->
           <div class="p-4 bg-white border-t border-gray-200 safe-bottom">
-            <div class="text-center text-gray-500 mb-3">已選擇 ${list?.items.length || 0} 個物品</div>
+            <div class="text-center text-gray-500 mb-3">已選擇 ${list?.items?.length || 0} 個物品</div>
             <button onclick="currentView='checklist'; render();"
                     class="w-full py-3 bg-gray-700 text-white rounded-xl font-medium active:bg-gray-800">
               完成

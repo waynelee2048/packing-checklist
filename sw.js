@@ -1,4 +1,4 @@
-const CACHE_NAME = 'packing-checklist-v2';
+const CACHE_NAME = 'packing-checklist-v3';
 const urlsToCache = [
   './',
   './index.html',
