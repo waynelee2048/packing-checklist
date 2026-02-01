@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#374151">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="打包清單">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <title>打包清單</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="app"></div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // 資料管理（localStorage）
+    // ═══════════════════════════════════════════════════════════════
+    const STORAGE_KEY = 'packing-checklist-data';
+
+    const defaultData = {
+      itemLibrary: [
+        { id: 1, name: '錢包', category: '必備', note: '放在玄關抽屜' },
+        { id: 2, name: '鑰匙', category: '必備', note: '大門+機車' },
+        { id: 3, name: '手機', category: '必備', note: '' },
+        { id: 4, name: '悠遊卡', category: '必備', note: '記得加值' },
+        { id: 5, name: '耳機', category: '電子產品', note: '充電盒在書桌' },
+        { id: 6, name: '行動電源', category: '電子產品', note: '出門前確認電量' },
+        { id: 7, name: '充電線', category: '電子產品', note: 'Type-C' },
+        { id: 8, name: '口罩', category: '個人物品', note: '備用放包包內袋' },
+        { id: 9, name: '面紙', category: '個人物品', note: '' },
+        { id: 10, name: '水壺', category: '個人物品', note: '裝滿水' },
+        { id: 11, name: '雨傘', category: '視天氣', note: '摺疊傘在門口' },
+        { id: 12, name: '護照', category: '旅行', note: '效期到 2027/05' },
+        { id: 13, name: '換洗衣物', category: '旅行', note: '依天數準備' },
+      ],
+      lists: [
+        { id: 1, name: '日常出門', icon: '🚶', items: [1, 2, 3, 4, 8, 9], checkedItems: [] },
+        { id: 2, name: '上班通勤', icon: '💼', items: [1, 2, 3, 4, 5, 6, 7, 8], checkedItems: [] },
+      ],
+      activeListId: 1
+    };
+
+    const categories = ['必備', '電子產品', '個人物品', '視天氣', '旅行', '運動'];
+    const iconOptions = ['📋', '🚶', '💼', '✈️', '🏃', '🎒', '🏖️', '🏕️', '🎯', '🛒'];
+
+    function loadData() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return { ...defaultData, ...parsed };
+        }
+      } catch (e) {
+        console.error('載入資料失敗', e);
+      }
+      return defaultData;
+    }
+
+    function saveData(data) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.error('儲存資料失敗', e);
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 應用程式狀態
+    // ═══════════════════════════════════════════════════════════════
+    let state = loadData();
+    let currentView = 'checklist'; // 'checklist' | 'lists' | 'library' | 'addItems'
+    let editingItemId = null;
+    let editingListId = null;
+    let expandedNotes = [];
+
+    function getActiveList() {
+      return state.lists.find(l => l.id === state.activeListId);
+    }
+
+    function getListItems() {
+      const list = getActiveList();
+      if (!list) return [];
+      return list.items
+        .map(id => state.itemLibrary.find(item => item.id === id))
+        .filter(Boolean);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 操作函數
+    // ═══════════════════════════════════════════════════════════════
+    function toggleItemCheck(itemId) {
+      state.lists = state.lists.map(list => {
+        if (list.id !== state.activeListId) return list;
+        const isChecked = list.checkedItems.includes(itemId);
+        return {
+          ...list,
+          checkedItems: isChecked
+            ? list.checkedItems.filter(id => id !== itemId)
+            : [...list.checkedItems, itemId]
+        };
+      });
+      saveData(state);
+      render();
+    }
+
+    function resetChecks() {
+      state.lists = state.lists.map(list =>
+        list.id === state.activeListId ? { ...list, checkedItems: [] } : list
+      );
+      saveData(state);
+      render();
+    }
+
+    function checkAll() {
+      const list = getActiveList();
+      if (list) {
+        state.lists = state.lists.map(l =>
+          l.id === state.activeListId ? { ...l, checkedItems: [...l.items] } : l
+        );
+        saveData(state);
+        render();
+      }
+    }
+
+    function selectList(listId) {
+      state.activeListId = listId;
+      currentView = 'checklist';
+      saveData(state);
+      render();
+    }
+
+    function addNewList(name, icon) {
+      const newList = {
+        id: Date.now(),
+        name: name.trim(),
+        icon: icon,
+        items: [],
+        checkedItems: []
+      };
+      state.lists.push(newList);
+      state.activeListId = newList.id;
+      saveData(state);
+      currentView = 'checklist';
+      render();
+    }
+
+    function deleteList(listId) {
+      if (state.lists.length <= 1) return;
+      state.lists = state.lists.filter(l => l.id !== listId);
+      if (state.activeListId === listId) {
+        state.activeListId = state.lists[0].id;
+      }
+      saveData(state);
+      render();
+    }
+
+    function toggleItemInList(itemId) {
+      state.lists = state.lists.map(list => {
+        if (list.id !== state.activeListId) return list;
+        const hasItem = list.items.includes(itemId);
+        return {
+          ...list,
+          items: hasItem
+            ? list.items.filter(id => id !== itemId)
+            : [...list.items, itemId],
+          checkedItems: hasItem
+            ? list.checkedItems.filter(id => id !== itemId)
+            : list.checkedItems
+        };
+      });
+      saveData(state);
+      render();
+    }
+
+    function addItemToLibrary(name, category, note) {
+      const newItem = {
+        id: Date.now(),
+        name: name.trim(),
+        category: category,
+        note: note.trim()
+      };
+      state.itemLibrary.push(newItem);
+      saveData(state);
+      render();
+    }
+
+    function updateItem(itemId, name, category, note) {
+      state.itemLibrary = state.itemLibrary.map(item =>
+        item.id === itemId ? { ...item, name, category, note } : item
+      );
+      editingItemId = null;
+      saveData(state);
+      render();
+    }
+
+    function deleteItemFromLibrary(itemId) {
+      state.itemLibrary = state.itemLibrary.filter(item => item.id !== itemId);
+      state.lists = state.lists.map(list => ({
+        ...list,
+        items: list.items.filter(id => id !== itemId),
+        checkedItems: list.checkedItems.filter(id => id !== itemId)
+      }));
+      saveData(state);
+      render();
+    }
+
+    function toggleNoteExpand(itemId) {
+      if (expandedNotes.includes(itemId)) {
+        expandedNotes = expandedNotes.filter(id => id !== itemId);
+      } else {
+        expandedNotes.push(itemId);
+      }
+      render();
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 渲染函數
+    // ═══════════════════════════════════════════════════════════════
+    function render() {
+      const app = document.getElementById('app');
+
+      if (currentView === 'checklist') {
+        app.innerHTML = renderChecklist();
+      } else if (currentView === 'lists') {
+        app.innerHTML = renderListsView();
+      } else if (currentView === 'library') {
+        app.innerHTML = renderLibraryView();
+      } else if (currentView === 'addItems') {
+        app.innerHTML = renderAddItemsView();
+      }
+
+      attachEventListeners();
+    }
+
+    function renderChecklist() {
+      const list = getActiveList();
+      const items = getListItems();
+      const checkedCount = list ? list.checkedItems.length : 0;
+      const totalCount = items.length;
+      const allChecked = totalCount > 0 && checkedCount === totalCount;
+      const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
+
+      return `
+        <div class="flex flex-col h-screen">
+          <!-- 頂部導航 -->
+          <div class="bg-gray-700 text-white px-4 py-3 safe-top">
+            <div class="flex items-center justify-between">
+              <button onclick="currentView='lists'; render();" class="p-2 -ml-2 rounded-lg hover:bg-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+              </button>
+              <div class="text-center">
+                <div class="text-lg font-bold flex items-center justify-center">
+                  <span class="mr-2">${list?.icon || '📋'}</span>
+                  ${list?.name || '清單'}
+                </div>
+              </div>
+              <button onclick="currentView='addItems'; render();" class="p-2 -mr-2 rounded-lg hover:bg-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+              </button>
+            </div>
+            <!-- 進度條 -->
+            ${totalCount > 0 ? `
+              <div class="mt-3">
+                <div class="flex justify-between text-xs text-gray-300 mb-1">
+                  <span>完成進度</span>
+                  <span>${checkedCount}/${totalCount}</span>
+                </div>
+                <div class="h-2 bg-gray-600 rounded-full overflow-hidden">
+                  <div class="h-full bg-white transition-all duration-300" style="width: ${progress}%"></div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- 清單內容 -->
+          <div class="flex-1 overflow-y-auto p-4 no-scrollbar">
+            ${items.length === 0 ? `
+              <div class="text-center py-16 text-gray-400">
+                <div class="text-5xl mb-4">📭</div>
+                <div class="text-lg mb-2">清單是空的</div>
+                <button onclick="currentView='addItems'; render();" class="text-gray-500 underline">
+                  從物品庫加入物品
+                </button>
+              </div>
+            ` : `
+              <div class="space-y-2">
+                ${items.map(item => {
+                  const isChecked = list.checkedItems.includes(item.id);
+                  const hasNote = item.note && item.note.trim();
+                  const isNoteExpanded = expandedNotes.includes(item.id);
+                  return `
+                    <div class="group">
+                      <div onclick="toggleItemCheck(${item.id})"
+                           class="flex items-center p-4 bg-white rounded-xl shadow-sm active:bg-gray-50 transition-all
+                                  ${isChecked ? 'bg-gray-50' : ''} ${isNoteExpanded ? 'rounded-b-none' : ''}">
+                        <div class="w-6 h-6 border-2 rounded-full mr-4 flex items-center justify-center flex-shrink-0 transition-colors
+                                    ${isChecked ? 'border-gray-600 bg-gray-600' : 'border-gray-300'}">
+                          ${isChecked ? '<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="${isChecked ? 'line-through text-gray-400' : 'text-gray-800'} text-lg">
+                            ${item.name}
+                          </div>
+                          <div class="text-xs text-gray-400">${item.category}</div>
+                        </div>
+                        ${hasNote ? `
+                          <button onclick="event.stopPropagation(); toggleNoteExpand(${item.id});"
+                                  class="p-2 rounded-lg ${isNoteExpanded ? 'bg-gray-200 text-gray-600' : 'text-gray-400'}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
+                            </svg>
+                          </button>
+                        ` : ''}
+                      </div>
+                      ${hasNote && isNoteExpanded ? `
+                        <div class="px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-xl">
+                          <div class="flex items-start text-sm text-gray-600">
+                            <span class="mr-2">📝</span>
+                            <span>${item.note}</span>
+                          </div>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- 底部按鈕 -->
+          ${items.length > 0 ? `
+            <div class="p-4 bg-white border-t border-gray-200 safe-bottom">
+              <div class="flex gap-3">
+                <button onclick="resetChecks()"
+                        class="flex-1 py-3 text-gray-600 border border-gray-300 rounded-xl font-medium active:bg-gray-100">
+                  重設
+                </button>
+                <button onclick="checkAll()"
+                        ${allChecked ? 'disabled' : ''}
+                        class="flex-1 py-3 rounded-xl font-medium transition-colors
+                               ${allChecked ? 'bg-gray-200 text-gray-400' : 'bg-gray-700 text-white active:bg-gray-800'}">
+                  ${allChecked ? '✓ 準備完成！' : '全部確認'}
+                </button>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    function renderListsView() {
+      return `
+        <div class="flex flex-col h-screen">
+          <!-- 頂部 -->
+          <div class="bg-gray-700 text-white px-4 py-3">
+            <div class="flex items-center justify-between">
+              <button onclick="currentView='checklist'; render();" class="p-2 -ml-2 rounded-lg hover:bg-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <div class="text-lg font-bold">我的清單</div>
+              <button onclick="currentView='library'; render();" class="p-2 -mr-2 rounded-lg hover:bg-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 清單列表 -->
+          <div class="flex-1 overflow-y-auto p-4 no-scrollbar">
+            <div class="space-y-2">
+              ${state.lists.map(list => {
+                const itemCount = list.items.length;
+                const checkedCount = list.checkedItems.length;
+                const isActive = list.id === state.activeListId;
+                return `
+                  <div onclick="selectList(${list.id})"
+                       class="flex items-center p-4 bg-white rounded-xl shadow-sm active:bg-gray-50 ${isActive ? 'ring-2 ring-gray-400' : ''}">
+                    <span class="text-2xl mr-3">${list.icon}</span>
+                    <div class="flex-1">
+                      <div class="font-medium text-gray-800">${list.name}</div>
+                      <div class="text-sm text-gray-400">${checkedCount}/${itemCount} 已確認</div>
+                    </div>
+                    ${state.lists.length > 1 ? `
+                      <button onclick="event.stopPropagation(); if(confirm('確定刪除此清單？')) deleteList(${list.id});"
+                              class="p-2 text-gray-400 hover:text-red-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- 新增清單 -->
+            <div class="mt-4 p-4 bg-white rounded-xl shadow-sm">
+              <div class="text-sm text-gray-500 mb-3">新增清單</div>
+              <div class="flex gap-1 mb-3 flex-wrap">
+                ${iconOptions.map(icon => `
+                  <button onclick="document.getElementById('newListIcon').value='${icon}'; this.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('bg-gray-200')); this.classList.add('bg-gray-200');"
+                          class="w-10 h-10 rounded-lg text-xl hover:bg-gray-100">${icon}</button>
+                `).join('')}
+              </div>
+              <input type="hidden" id="newListIcon" value="📋">
+              <div class="flex gap-2">
+                <input type="text" id="newListName" placeholder="清單名稱..."
+                       class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-gray-500">
+                <button onclick="const name=document.getElementById('newListName').value; const icon=document.getElementById('newListIcon').value; if(name.trim()) addNewList(name, icon);"
+                        class="px-6 py-3 bg-gray-700 text-white rounded-xl font-medium active:bg-gray-800">
+                  建立
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 底部：物品庫入口 -->
+          <div class="p-4 bg-white border-t border-gray-200 safe-bottom">
+            <button onclick="currentView='library'; render();"
+                    class="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium active:bg-gray-50">
+              📚 管理物品庫
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLibraryView() {
+      const groupedItems = {};
+      categories.forEach(cat => { groupedItems[cat] = []; });
+      state.itemLibrary.forEach(item => {
+        if (groupedItems[item.category]) {
+          groupedItems[item.category].push(item);
+        }
+      });
+
+      return `
+        <div class="flex flex-col h-screen">
+          <!-- 頂部 -->
+          <div class="bg-gray-700 text-white px-4 py-3">
+            <div class="flex items-center justify-between">
+              <button onclick="currentView='lists'; render();" class="p-2 -ml-2 rounded-lg hover:bg-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <div class="text-lg font-bold">📚 物品庫</div>
+              <div class="w-10"></div>
+            </div>
+          </div>
+
+          <!-- 新增物品 -->
+          <div class="p-4 bg-gray-50 border-b border-gray-200">
+            <div class="text-sm text-gray-500 mb-2">新增物品</div>
+            <input type="text" id="newItemName" placeholder="物品名稱..."
+                   class="w-full px-4 py-3 border border-gray-300 rounded-xl mb-2 focus:outline-none focus:border-gray-500">
+            <select id="newItemCategory"
+                    class="w-full px-4 py-3 border border-gray-300 rounded-xl mb-2 bg-white focus:outline-none focus:border-gray-500">
+              ${categories.map(cat => `<option value="${cat}">${cat}</option>`).join('')}
+            </select>
+            <input type="text" id="newItemNote" placeholder="備註（選填）：存放位置、提醒事項..."
+                   class="w-full px-4 py-3 border border-gray-300 rounded-xl mb-2 text-gray-600 focus:outline-none focus:border-gray-500">
+            <button onclick="const name=document.getElementById('newItemName').value; const cat=document.getElementById('newItemCategory').value; const note=document.getElementById('newItemNote').value; if(name.trim()){ addItemToLibrary(name,cat,note); document.getElementById('newItemName').value=''; document.getElementById('newItemNote').value=''; }"
+                    class="w-full py-3 bg-gray-700 text-white rounded-xl font-medium active:bg-gray-800">
+              + 新增物品
+            </button>
+          </div>
+
+          <!-- 物品列表 -->
+          <div class="flex-1 overflow-y-auto p-4 no-scrollbar">
+            ${categories.map(category => {
+              const items = groupedItems[category];
+              if (items.length === 0) return '';
+              return `
+                <div class="mb-4">
+                  <div class="text-sm text-gray-500 font-medium mb-2">${category}</div>
+                  <div class="space-y-2">
+                    ${items.map(item => `
+                      <div class="p-3 bg-white rounded-xl shadow-sm">
+                        <div class="flex items-center justify-between">
+                          <span class="font-medium text-gray-800">${item.name}</span>
+                          <div class="flex gap-2">
+                            <button onclick="editingItemId=${item.id}; render();" class="text-sm text-gray-400 px-2">編輯</button>
+                            <button onclick="if(confirm('確定刪除？')) deleteItemFromLibrary(${item.id});" class="text-sm text-red-400 px-2">刪除</button>
+                          </div>
+                        </div>
+                        ${item.note ? `<div class="text-sm text-gray-400 mt-1">📝 ${item.note}</div>` : ''}
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- 編輯彈窗 -->
+        ${editingItemId ? (() => {
+          const item = state.itemLibrary.find(i => i.id === editingItemId);
+          if (!item) return '';
+          return `
+            <div class="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50" onclick="editingItemId=null; render();">
+              <div class="bg-white w-full max-w-lg rounded-t-2xl p-6 safe-bottom" onclick="event.stopPropagation();">
+                <div class="text-lg font-bold mb-4">編輯物品</div>
+                <input type="text" id="editItemName" value="${item.name}"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-xl mb-2 focus:outline-none focus:border-gray-500">
+                <select id="editItemCategory"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl mb-2 bg-white focus:outline-none focus:border-gray-500">
+                  ${categories.map(cat => `<option value="${cat}" ${item.category === cat ? 'selected' : ''}>${cat}</option>`).join('')}
+                </select>
+                <input type="text" id="editItemNote" value="${item.note || ''}" placeholder="備註（選填）"
+                       class="w-full px-4 py-3 border border-gray-300 rounded-xl mb-4 focus:outline-none focus:border-gray-500">
+                <div class="flex gap-3">
+                  <button onclick="editingItemId=null; render();"
+                          class="flex-1 py-3 border border-gray-300 rounded-xl font-medium">取消</button>
+                  <button onclick="updateItem(${item.id}, document.getElementById('editItemName').value, document.getElementById('editItemCategory').value, document.getElementById('editItemNote').value);"
+                          class="flex-1 py-3 bg-gray-700 text-white rounded-xl font-medium">儲存</button>
+                </div>
+              </div>
+            </div>
+          `;
+        })() : ''}
+      `;
+    }
+
+    function renderAddItemsView() {
+      const list = getActiveList();
+      const groupedItems = {};
+      categories.forEach(cat => { groupedItems[cat] = []; });
+      state.itemLibrary.forEach(item => {
+        if (groupedItems[item.category]) {
+          groupedItems[item.category].push(item);
+        }
+      });
+
+      return `
+        <div class="flex flex-col h-screen">
+          <!-- 頂部 -->
+          <div class="bg-gray-700 text-white px-4 py-3">
+            <div class="flex items-center justify-between">
+              <button onclick="currentView='checklist'; render();" class="p-2 -ml-2 rounded-lg hover:bg-gray-600">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <div class="text-lg font-bold">加入物品</div>
+              <div class="w-10"></div>
+            </div>
+            <div class="text-sm text-gray-300 mt-1">選擇要加入「${list?.name}」的物品</div>
+          </div>
+
+          <!-- 物品選擇 -->
+          <div class="flex-1 overflow-y-auto p-4 no-scrollbar">
+            ${categories.map(category => {
+              const items = groupedItems[category];
+              if (items.length === 0) return '';
+              return `
+                <div class="mb-4">
+                  <div class="text-sm text-gray-500 font-medium mb-2">${category}</div>
+                  <div class="space-y-2">
+                    ${items.map(item => {
+                      const isInList = list?.items.includes(item.id);
+                      return `
+                        <div onclick="toggleItemInList(${item.id})"
+                             class="flex items-center p-4 bg-white rounded-xl shadow-sm active:bg-gray-50 ${isInList ? 'ring-2 ring-gray-400' : ''}">
+                          <div class="w-6 h-6 border-2 rounded-full mr-4 flex items-center justify-center flex-shrink-0
+                                      ${isInList ? 'border-gray-600 bg-gray-600' : 'border-gray-300'}">
+                            ${isInList ? '<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>' : ''}
+                          </div>
+                          <div class="flex-1">
+                            <div class="${isInList ? 'text-gray-800 font-medium' : 'text-gray-600'}">${item.name}</div>
+                            ${item.note ? `<div class="text-xs text-gray-400 mt-0.5">📝 ${item.note}</div>` : ''}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- 底部 -->
+          <div class="p-4 bg-white border-t border-gray-200 safe-bottom">
+            <div class="text-center text-gray-500 mb-3">已選擇 ${list?.items.length || 0} 個物品</div>
+            <button onclick="currentView='checklist'; render();"
+                    class="w-full py-3 bg-gray-700 text-white rounded-xl font-medium active:bg-gray-800">
+              完成
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function attachEventListeners() {
+      // 如果需要額外的事件監聽器
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // PWA Service Worker 註冊
+    // ═══════════════════════════════════════════════════════════════
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW registration failed', err));
+      });
+    }
+
+    // 初始渲染
+    render();
+  </script>
+</body>
+</html>
