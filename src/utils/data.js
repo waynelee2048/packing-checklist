@@ -27,6 +27,26 @@ export const defaultData = {
   activeListId: 1
 };
 
+// Email encoding for Firebase keys (. → ,)
+export function encodeEmail(email) {
+  return email.toLowerCase().replace(/\./g, ',');
+}
+
+export function decodeEmail(encoded) {
+  return encoded.replace(/,/g, '.');
+}
+
+// Sanitize shared list data from Firebase
+export function sanitizeSharedList(sharedList) {
+  if (!sharedList) return null;
+  return {
+    ...sharedList,
+    items: Array.isArray(sharedList.items) ? sharedList.items : [],
+    checkedItems: Array.isArray(sharedList.checkedItems) ? sharedList.checkedItems : [],
+    sharedWith: sharedList.sharedWith || {}
+  };
+}
+
 // Sanitize data from Firebase (handles null arrays)
 export function sanitizeData(data) {
   if (!data) return defaultData;
@@ -36,7 +56,8 @@ export function sanitizeData(data) {
     lists: Array.isArray(data.lists) ? data.lists.map(list => ({
       ...list,
       items: Array.isArray(list.items) ? list.items : [],
-      checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : []
+      checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : [],
+      ...(list.sharedListId ? { sharedListId: list.sharedListId } : {})
     })) : defaultData.lists,
     activeListId: data.activeListId || defaultData.activeListId
   };

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useFirebase } from './hooks/useFirebase';
+import { useSharedLists } from './hooks/useSharedLists';
 import { usePWA } from './hooks/usePWA';
 import { loadFromLocal } from './utils/data';
 import Checklist from './components/Checklist';
@@ -10,11 +11,16 @@ import UpdatePrompt from './components/UpdatePrompt';
 
 function App() {
   const [currentView, setCurrentView] = useState('checklist');
+  const [activeSharedListId, setActiveSharedListId] = useState(null);
   const initialData = loadFromLocal();
   const { user, data, syncStatus, saveData, handleLogin, handleLogout } = useFirebase(initialData);
+  const shared = useSharedLists(user, data);
   const { needRefresh, refresh, dismiss } = usePWA();
 
-  const navigate = (view) => {
+  const navigate = (view, params) => {
+    if (params?.sharedListId !== undefined) {
+      setActiveSharedListId(params.sharedListId);
+    }
     setCurrentView(view);
   };
 
@@ -29,13 +35,17 @@ function App() {
           onLogout={handleLogout}
           onNavigate={navigate}
           onSaveData={saveData}
+          shared={shared}
+          activeSharedListId={activeSharedListId}
         />
       )}
       {currentView === 'lists' && (
         <ListsView
           data={data}
+          user={user}
           onNavigate={navigate}
           onSaveData={saveData}
+          shared={shared}
         />
       )}
       {currentView === 'library' && (

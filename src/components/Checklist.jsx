@@ -8,10 +8,26 @@ export default function Checklist({
   onLogin,
   onLogout,
   onNavigate,
-  onSaveData
+  onSaveData,
+  shared,
+  activeSharedListId
 }) {
   const [expandedNotes, setExpandedNotes] = useState([]);
 
+  // Determine mode: 'shared-with-me', 'own-shared', or 'local'
+  const isSharedWithMe = activeSharedListId && shared?.sharedWithMe?.[activeSharedListId];
+  const isOwnShared = activeSharedListId && shared?.sharedByMe?.[activeSharedListId];
+
+  const mode = isSharedWithMe ? 'shared-with-me' : isOwnShared ? 'own-shared' : 'local';
+
+  // Get the shared data if applicable
+  const sharedData = isSharedWithMe
+    ? shared.sharedWithMe[activeSharedListId]
+    : isOwnShared
+      ? shared.sharedByMe[activeSharedListId]
+      : null;
+
+  // Local list (for 'local' and 'own-shared' modes)
   const list = data.lists?.find(l => l.id === data.activeListId);
   const safeList = list ? {
     ...list,
@@ -19,54 +35,93 @@ export default function Checklist({
     checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : []
   } : null;
 
-  const items = safeList
-    ? safeList.items
-        .map(id => data.itemLibrary?.find(item => item.id === id))
-        .filter(Boolean)
-    : [];
+  // Build items and checkedItems based on mode
+  let items = [];
+  let checkedItems = [];
+  let displayName = '';
+  let displayIcon = '';
+  let ownerLabel = '';
 
-  const checkedCount = safeList?.checkedItems?.length || 0;
+  if (mode === 'shared-with-me' && sharedData) {
+    items = (sharedData.items || []).filter(Boolean);
+    checkedItems = sharedData.checkedItems || [];
+    displayName = sharedData.name || '清單';
+    displayIcon = sharedData.icon || '📋';
+    ownerLabel = sharedData.ownerName || sharedData.ownerEmail || '';
+  } else if (mode === 'own-shared' && safeList && sharedData) {
+    items = safeList.items
+      .map(id => data.itemLibrary?.find(item => item.id === id))
+      .filter(Boolean);
+    checkedItems = sharedData.checkedItems || [];
+    displayName = safeList.name || '清單';
+    displayIcon = safeList.icon || '📋';
+  } else {
+    // local mode
+    items = safeList
+      ? safeList.items
+          .map(id => data.itemLibrary?.find(item => item.id === id))
+          .filter(Boolean)
+      : [];
+    checkedItems = safeList?.checkedItems || [];
+    displayName = safeList?.name || '清單';
+    displayIcon = safeList?.icon || '📋';
+  }
+
+  const checkedCount = checkedItems.length;
   const totalCount = items.length;
   const allChecked = totalCount > 0 && checkedCount === totalCount;
   const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
 
   const toggleItemCheck = (itemId) => {
-    const newData = {
-      ...data,
-      lists: data.lists.map(l => {
-        if (l.id !== data.activeListId) return l;
-        const checkedItems = Array.isArray(l.checkedItems) ? l.checkedItems : [];
-        const isChecked = checkedItems.includes(itemId);
-        return {
-          ...l,
-          checkedItems: isChecked
-            ? checkedItems.filter(id => id !== itemId)
-            : [...checkedItems, itemId]
-        };
-      })
-    };
-    onSaveData(newData);
+    if (mode === 'shared-with-me' || mode === 'own-shared') {
+      shared.toggleSharedCheck(activeSharedListId, itemId);
+    } else {
+      const newData = {
+        ...data,
+        lists: data.lists.map(l => {
+          if (l.id !== data.activeListId) return l;
+          const checked = Array.isArray(l.checkedItems) ? l.checkedItems : [];
+          const isChecked = checked.includes(itemId);
+          return {
+            ...l,
+            checkedItems: isChecked
+              ? checked.filter(id => id !== itemId)
+              : [...checked, itemId]
+          };
+        })
+      };
+      onSaveData(newData);
+    }
   };
 
   const resetChecks = () => {
-    const newData = {
-      ...data,
-      lists: data.lists.map(l =>
-        l.id === data.activeListId ? { ...l, checkedItems: [] } : l
-      )
-    };
-    onSaveData(newData);
+    if (mode === 'shared-with-me' || mode === 'own-shared') {
+      shared.resetSharedChecks(activeSharedListId);
+    } else {
+      const newData = {
+        ...data,
+        lists: data.lists.map(l =>
+          l.id === data.activeListId ? { ...l, checkedItems: [] } : l
+        )
+      };
+      onSaveData(newData);
+    }
   };
 
   const checkAll = () => {
-    if (!safeList) return;
-    const newData = {
-      ...data,
-      lists: data.lists.map(l =>
-        l.id === data.activeListId ? { ...l, checkedItems: [...safeList.items] } : l
-      )
-    };
-    onSaveData(newData);
+    if (mode === 'shared-with-me' || mode === 'own-shared') {
+      const allIds = items.map(item => item.id);
+      shared.checkAllShared(activeSharedListId, allIds);
+    } else {
+      if (!safeList) return;
+      const newData = {
+        ...data,
+        lists: data.lists.map(l =>
+          l.id === data.activeListId ? { ...l, checkedItems: [...safeList.items] } : l
+        )
+      };
+      onSaveData(newData);
+    }
   };
 
   const toggleNoteExpand = (itemId) => {
@@ -77,13 +132,25 @@ export default function Checklist({
     );
   };
 
+  const handleBack = () => {
+    onNavigate('lists', { sharedListId: null });
+  };
+
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="bg-gray-700 text-white px-4 py-3 safe-top">
         {/* User status bar */}
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-gray-300">打包清單</div>
+          <div className="text-sm text-gray-300">
+            打包清單
+            {mode === 'shared-with-me' && ownerLabel && (
+              <span className="ml-2 text-blue-300">來自 {ownerLabel}</span>
+            )}
+            {mode === 'own-shared' && (
+              <span className="ml-2 text-green-300">已分享</span>
+            )}
+          </div>
           <UserSection
             user={user}
             syncStatus={syncStatus}
@@ -93,7 +160,7 @@ export default function Checklist({
         </div>
         <div className="flex items-center justify-between">
           <button
-            onClick={() => onNavigate('lists')}
+            onClick={handleBack}
             className="p-2 -ml-2 rounded-lg hover:bg-gray-600"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,18 +169,22 @@ export default function Checklist({
           </button>
           <div className="text-center">
             <div className="text-lg font-bold flex items-center justify-center">
-              <span className="mr-2">{safeList?.icon || '📋'}</span>
-              {safeList?.name || '清單'}
+              <span className="mr-2">{displayIcon}</span>
+              {displayName}
             </div>
           </div>
-          <button
-            onClick={() => onNavigate('addItems')}
-            className="p-2 -mr-2 rounded-lg hover:bg-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
-            </svg>
-          </button>
+          {mode === 'shared-with-me' ? (
+            <div className="p-2 -mr-2 w-10" /> // placeholder for alignment
+          ) : (
+            <button
+              onClick={() => onNavigate('addItems')}
+              className="p-2 -mr-2 rounded-lg hover:bg-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
+              </svg>
+            </button>
+          )}
         </div>
         {/* Progress bar */}
         {totalCount > 0 && (
@@ -138,17 +209,19 @@ export default function Checklist({
           <div className="text-center py-16 text-gray-400">
             <div className="text-5xl mb-4">📭</div>
             <div className="text-lg mb-2">清單是空的</div>
-            <button
-              onClick={() => onNavigate('addItems')}
-              className="text-gray-500 underline"
-            >
-              從物品庫加入物品
-            </button>
+            {mode !== 'shared-with-me' && (
+              <button
+                onClick={() => onNavigate('addItems')}
+                className="text-gray-500 underline"
+              >
+                從物品庫加入物品
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
             {items.map(item => {
-              const isChecked = safeList.checkedItems.includes(item.id);
+              const isChecked = checkedItems.includes(item.id);
               const hasNote = item.note && item.note.trim();
               const isNoteExpanded = expandedNotes.includes(item.id);
 
@@ -190,7 +263,7 @@ export default function Checklist({
                   {hasNote && isNoteExpanded && (
                     <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-xl">
                       <div className="flex items-start text-sm text-gray-600">
-                        <span className="mr-2">📝</span>
+                        <span className="mr-2">{'\uD83D\uDCDD'}</span>
                         <span>{item.note}</span>
                       </div>
                     </div>
