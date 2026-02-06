@@ -165,7 +165,7 @@ export default function Checklist({
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen pb-16">
       {/* Header */}
       <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
         <div className="flex items-center justify-between">
@@ -276,7 +276,7 @@ export default function Checklist({
 
       {/* Bottom buttons */}
       {items.length > 0 && (
-        <div className="p-4 bg-white border-t border-slate-200 mb-16 safe-bottom">
+        <div className="p-4 bg-white border-t border-slate-200">
           <div className="flex gap-3">
             <button
               onClick={() => setConfirmAction('reset')}

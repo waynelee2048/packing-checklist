@@ -97,7 +97,7 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
   const editingItem = editingItemId ? data.itemLibrary.find(i => i.id === editingItemId) : null;
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen pb-16">
       {/* Header */}
       <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
         <div className="text-lg font-bold text-center">物品庫</div>
@@ -161,7 +161,7 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
       </div>
 
       {/* Items list */}
-      <div className="flex-1 overflow-y-auto p-4 pb-20 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
         {categories.map(category => {
           const items = searchQuery
             ? groupedItems[category].filter(item => {
