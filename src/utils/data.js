@@ -2,7 +2,12 @@ export const STORAGE_KEY = 'packing-checklist-data';
 
 export const categories = ['必備', '電子產品', '個人物品', '視天氣', '旅行', '運動'];
 
-export const iconOptions = ['📋', '🚶', '💼', '✈️', '🏃', '🎒', '🏖️', '🏕️', '🎯', '🛒'];
+export const iconOptions = [
+  'clipboard-list', 'footprints', 'briefcase', 'plane', 'person-standing',
+  'backpack', 'umbrella', 'tent', 'target', 'shopping-cart',
+  'shirt', 'dumbbell', 'mountain', 'baby', 'camera',
+  'heart', 'music', 'book-open', 'coffee', 'gift',
+];
 
 export const defaultData = {
   itemLibrary: [
@@ -21,8 +26,8 @@ export const defaultData = {
     { id: 13, name: '換洗衣物', category: '旅行', note: '依天數準備' },
   ],
   lists: [
-    { id: 1, name: '日常出門', icon: '🚶', items: [1, 2, 3, 4, 8, 9], checkedItems: [] },
-    { id: 2, name: '上班通勤', icon: '💼', items: [1, 2, 3, 4, 5, 6, 7, 8], checkedItems: [] },
+    { id: 1, name: '日常出門', icon: 'footprints', items: [1, 2, 3, 4, 8, 9], checkedItems: [] },
+    { id: 2, name: '上班通勤', icon: 'briefcase', items: [1, 2, 3, 4, 5, 6, 7, 8], checkedItems: [] },
   ],
   activeListId: 1
 };

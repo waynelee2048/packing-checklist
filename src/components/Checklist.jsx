@@ -1,5 +1,36 @@
 import { useState } from 'react';
-import UserSection from './UserSection';
+import { Plus, Inbox, StickyNote, Check } from 'lucide-react';
+import Icon from './Icon';
+
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black bg-opacity-50" />
+      <div
+        className="relative w-full max-w-lg bg-white rounded-t-2xl animate-slide-up safe-bottom"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <p className="text-center text-lg text-slate-800 mb-6">{message}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+            >
+              取消
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
+            >
+              確定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Checklist({
   data,
@@ -13,6 +44,7 @@ export default function Checklist({
   activeSharedListId
 }) {
   const [expandedNotes, setExpandedNotes] = useState([]);
+  const [confirmAction, setConfirmAction] = useState(null);
 
   // Determine mode: 'shared-with-me', 'own-shared', or 'local'
   const isSharedWithMe = activeSharedListId && shared?.sharedWithMe?.[activeSharedListId];
@@ -46,7 +78,7 @@ export default function Checklist({
     items = (sharedData.items || []).filter(Boolean);
     checkedItems = sharedData.checkedItems || [];
     displayName = sharedData.name || '清單';
-    displayIcon = sharedData.icon || '📋';
+    displayIcon = sharedData.icon || 'clipboard-list';
     ownerLabel = sharedData.ownerName || sharedData.ownerEmail || '';
   } else if (mode === 'own-shared' && safeList && sharedData) {
     items = safeList.items
@@ -54,7 +86,7 @@ export default function Checklist({
       .filter(Boolean);
     checkedItems = sharedData.checkedItems || [];
     displayName = safeList.name || '清單';
-    displayIcon = safeList.icon || '📋';
+    displayIcon = safeList.icon || 'clipboard-list';
   } else {
     // local mode
     items = safeList
@@ -64,7 +96,7 @@ export default function Checklist({
       : [];
     checkedItems = safeList?.checkedItems || [];
     displayName = safeList?.name || '清單';
-    displayIcon = safeList?.icon || '📋';
+    displayIcon = safeList?.icon || 'clipboard-list';
   }
 
   const checkedCount = checkedItems.length;
@@ -132,70 +164,41 @@ export default function Checklist({
     );
   };
 
-  const handleBack = () => {
-    onNavigate('lists', { sharedListId: null });
-  };
-
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="bg-gray-700 text-white px-4 py-3 safe-top">
-        {/* User status bar */}
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-gray-300">
-            打包清單
+      <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <Icon name={displayIcon} size={22} className="text-indigo-600 flex-shrink-0" />
+            <span className="text-lg font-bold truncate">{displayName}</span>
             {mode === 'shared-with-me' && ownerLabel && (
-              <span className="ml-2 text-blue-300">來自 {ownerLabel}</span>
+              <span className="text-xs text-indigo-500 flex-shrink-0">來自 {ownerLabel}</span>
             )}
             {mode === 'own-shared' && (
-              <span className="ml-2 text-green-300">已分享</span>
+              <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-200 flex-shrink-0">已分享</span>
             )}
           </div>
-          <UserSection
-            user={user}
-            syncStatus={syncStatus}
-            onLogin={onLogin}
-            onLogout={onLogout}
-          />
-        </div>
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleBack}
-            className="p-2 -ml-2 rounded-lg hover:bg-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-          </button>
-          <div className="text-center">
-            <div className="text-lg font-bold flex items-center justify-center">
-              <span className="mr-2">{displayIcon}</span>
-              {displayName}
-            </div>
-          </div>
-          {mode === 'shared-with-me' ? (
-            <div className="p-2 -mr-2 w-10" /> // placeholder for alignment
-          ) : (
+          {mode !== 'shared-with-me' && (
             <button
               onClick={() => onNavigate('addItems')}
-              className="p-2 -mr-2 rounded-lg hover:bg-gray-600"
+              className="p-2 -mr-2 rounded-lg active:bg-slate-100 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="新增物品"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/>
-              </svg>
+              <Plus size={22} className="text-indigo-600" />
             </button>
           )}
         </div>
         {/* Progress bar */}
         {totalCount > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-gray-300 mb-1">
+            <div className="flex justify-between text-xs text-slate-500 mb-1">
               <span>完成進度</span>
               <span>{checkedCount}/{totalCount}</span>
             </div>
-            <div className="h-2 bg-gray-600 rounded-full overflow-hidden">
+            <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-white transition-all duration-300"
+                className="h-full bg-indigo-600 transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -204,15 +207,15 @@ export default function Checklist({
       </div>
 
       {/* Checklist content */}
-      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar">
         {items.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <div className="text-5xl mb-4">📭</div>
+          <div className="text-center py-16 text-slate-400">
+            <Inbox size={48} className="mx-auto mb-4 text-slate-300" />
             <div className="text-lg mb-2">清單是空的</div>
             {mode !== 'shared-with-me' && (
               <button
                 onClick={() => onNavigate('addItems')}
-                className="text-gray-500 underline"
+                className="text-indigo-600 font-medium active:text-indigo-700 transition-colors duration-150"
               >
                 從物品庫加入物品
               </button>
@@ -226,25 +229,21 @@ export default function Checklist({
               const isNoteExpanded = expandedNotes.includes(item.id);
 
               return (
-                <div key={item.id} className="group">
+                <div key={item.id}>
                   <div
                     onClick={() => toggleItemCheck(item.id)}
-                    className={`flex items-center p-4 bg-white rounded-xl shadow-sm active:bg-gray-50 transition-all cursor-pointer
-                      ${isChecked ? 'bg-gray-50' : ''} ${isNoteExpanded ? 'rounded-b-none' : ''}`}
+                    className={`flex items-center p-4 bg-white rounded-xl border border-slate-200 active:bg-slate-50 transition-colors duration-150 cursor-pointer min-h-[56px]
+                      ${isChecked ? 'bg-slate-50' : ''} ${isNoteExpanded ? 'rounded-b-none border-b-0' : ''}`}
                   >
-                    <div className={`w-6 h-6 border-2 rounded-full mr-4 flex items-center justify-center flex-shrink-0 transition-colors
-                      ${isChecked ? 'border-gray-600 bg-gray-600' : 'border-gray-300'}`}>
-                      {isChecked && (
-                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                        </svg>
-                      )}
+                    <div className={`w-6 h-6 border-2 rounded-full mr-4 flex items-center justify-center flex-shrink-0 transition-colors duration-150
+                      ${isChecked ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'}`}>
+                      {isChecked && <Check size={14} className="text-white" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className={`${isChecked ? 'line-through text-gray-400' : 'text-gray-800'} text-lg`}>
+                      <div className={`${isChecked ? 'line-through text-slate-400' : 'text-slate-800'} text-lg`}>
                         {item.name}
                       </div>
-                      <div className="text-xs text-gray-400">{item.category}</div>
+                      <div className="text-xs text-slate-400">{item.category}</div>
                     </div>
                     {hasNote && (
                       <button
@@ -252,18 +251,18 @@ export default function Checklist({
                           e.stopPropagation();
                           toggleNoteExpand(item.id);
                         }}
-                        className={`p-2 rounded-lg ${isNoteExpanded ? 'bg-gray-200 text-gray-600' : 'text-gray-400'}`}
+                        className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
+                          ${isNoteExpanded ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400'}`}
+                        aria-label="展開備註"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                        </svg>
+                        <StickyNote size={18} />
                       </button>
                     )}
                   </div>
                   {hasNote && isNoteExpanded && (
-                    <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 rounded-b-xl">
-                      <div className="flex items-start text-sm text-gray-600">
-                        <span className="mr-2">{'\uD83D\uDCDD'}</span>
+                    <div className="px-4 py-3 bg-indigo-50 border border-slate-200 border-t-0 rounded-b-xl">
+                      <div className="flex items-start text-sm text-slate-600 gap-2">
+                        <StickyNote size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
                         <span>{item.note}</span>
                       </div>
                     </div>
@@ -277,24 +276,39 @@ export default function Checklist({
 
       {/* Bottom buttons */}
       {items.length > 0 && (
-        <div className="p-4 bg-white border-t border-gray-200 safe-bottom">
+        <div className="p-4 bg-white border-t border-slate-200 pb-24 safe-bottom">
           <div className="flex gap-3">
             <button
-              onClick={resetChecks}
-              className="flex-1 py-3 text-gray-600 border border-gray-300 rounded-xl font-medium active:bg-gray-100"
+              onClick={() => setConfirmAction('reset')}
+              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
             >
               重設
             </button>
             <button
-              onClick={checkAll}
+              onClick={() => setConfirmAction('checkAll')}
               disabled={allChecked}
-              className={`flex-1 py-3 rounded-xl font-medium transition-colors
-                ${allChecked ? 'bg-gray-200 text-gray-400' : 'bg-gray-700 text-white active:bg-gray-800'}`}
+              className={`flex-1 py-3 rounded-xl font-medium transition-colors duration-150 min-h-[44px]
+                ${allChecked ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-600 text-white active:bg-indigo-700'}`}
             >
-              {allChecked ? '✓ 準備完成！' : '全部確認'}
+              {allChecked ? '準備完成！' : '全部確認'}
             </button>
           </div>
         </div>
+      )}
+
+      {confirmAction === 'reset' && (
+        <ConfirmDialog
+          message="確定要重設所有勾選？"
+          onConfirm={() => { resetChecks(); setConfirmAction(null); }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
+      {confirmAction === 'checkAll' && (
+        <ConfirmDialog
+          message="確定要勾選全部項目？"
+          onConfirm={() => { checkAll(); setConfirmAction(null); }}
+          onCancel={() => setConfirmAction(null)}
+        />
       )}
     </div>
   );

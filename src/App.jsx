@@ -7,6 +7,8 @@ import Checklist from './components/Checklist';
 import ListsView from './components/ListsView';
 import LibraryView from './components/LibraryView';
 import AddItemsView from './components/AddItemsView';
+import ProfileView from './components/ProfileView';
+import BottomTabBar from './components/BottomTabBar';
 import UpdatePrompt from './components/UpdatePrompt';
 
 function App() {
@@ -23,6 +25,8 @@ function App() {
     }
     setCurrentView(view);
   };
+
+  const showTabBar = currentView !== 'addItems';
 
   return (
     <>
@@ -60,6 +64,20 @@ function App() {
           data={data}
           onNavigate={navigate}
           onSaveData={saveData}
+        />
+      )}
+      {currentView === 'profile' && (
+        <ProfileView
+          user={user}
+          syncStatus={syncStatus}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+        />
+      )}
+      {showTabBar && (
+        <BottomTabBar
+          currentView={currentView}
+          onNavigate={(view) => navigate(view, { sharedListId: null })}
         />
       )}
       {needRefresh && (

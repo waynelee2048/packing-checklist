@@ -12,8 +12,8 @@ export default defineConfig({
         name: '打包清單',
         short_name: '打包清單',
         description: '出門前確認隨身物品的清單工具',
-        theme_color: '#374151',
-        background_color: '#f3f4f6',
+        theme_color: '#4F46E5',
+        background_color: '#F8FAFC',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '.',
@@ -47,6 +47,9 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    allowedHosts: ['.trycloudflare.com']
+  },
   base: '/packing-checklist/',
   build: {
     outDir: 'docs',

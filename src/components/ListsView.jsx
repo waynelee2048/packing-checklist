@@ -1,12 +1,45 @@
 import { useState } from 'react';
+import { Trash2, Share2, X } from 'lucide-react';
 import { iconOptions } from '../utils/data';
+import Icon from './Icon';
 import SharePanel from './SharePanel';
+
+function ConfirmDialog({ message, onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
+      <div className="absolute inset-0 bg-black bg-opacity-50" />
+      <div
+        className="relative w-full max-w-lg bg-white rounded-t-2xl animate-slide-up safe-bottom"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <p className="text-center text-lg text-slate-800 mb-6">{message}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+            >
+              取消
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-3 bg-rose-500 text-white rounded-xl font-medium active:bg-rose-600 transition-colors duration-150 min-h-[44px]"
+            >
+              確定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ListsView({ data, user, onNavigate, onSaveData, shared }) {
   const [newListName, setNewListName] = useState('');
-  const [newListIcon, setNewListIcon] = useState('📋');
-  const [sharePanelListId, setSharePanelListId] = useState(null); // local list id for share panel
-  const [sharePanelSharedId, setSharePanelSharedId] = useState(null); // sharedListId for share panel
+  const [newListIcon, setNewListIcon] = useState('clipboard-list');
+  const [sharePanelListId, setSharePanelListId] = useState(null);
+  const [sharePanelSharedId, setSharePanelSharedId] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
 
   const selectList = (listId, sharedListId) => {
     const newData = {
@@ -40,14 +73,12 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
 
     onSaveData(newData);
     setNewListName('');
-    setNewListIcon('📋');
+    setNewListIcon('clipboard-list');
     onNavigate('checklist', { sharedListId: null });
   };
 
-  const deleteList = async (listId, e) => {
-    e.stopPropagation();
+  const deleteList = async (listId) => {
     if (data.lists.length <= 1) return;
-    if (!confirm('確定刪除此清單？')) return;
 
     const listToDelete = data.lists.find(l => l.id === listId);
 
@@ -67,9 +98,16 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
       activeListId: data.activeListId === listId ? newLists[0].id : data.activeListId
     };
     onSaveData(newData);
+    setConfirmDelete(null);
   };
 
-  // Share button handler - opens panel for initial share or manage existing
+  const handleDeleteClick = (listId, e) => {
+    e.stopPropagation();
+    if (data.lists.length <= 1) return;
+    setConfirmDelete(listId);
+  };
+
+  // Share button handler
   const handleShareClick = (list, e) => {
     e.stopPropagation();
     setSharePanelListId(list.id);
@@ -83,7 +121,6 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
 
     try {
       const sharedListId = await shared.shareList(list, data.itemLibrary, [email]);
-      // Save sharedListId back to the local list
       const newData = {
         ...data,
         lists: data.lists.map(l =>
@@ -98,7 +135,6 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     }
   };
 
-  // Add user to existing shared list
   const handleAddUser = async (email) => {
     if (sharePanelSharedId) {
       try {
@@ -111,7 +147,6 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     }
   };
 
-  // Remove user from shared list
   const handleRemoveUser = async (email) => {
     if (!sharePanelSharedId || !shared) return;
     try {
@@ -121,14 +156,11 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     }
   };
 
-  // Completely unshare
   const handleUnshare = async () => {
     if (!sharePanelSharedId || !shared) return;
-    if (!confirm('確定停止分享？所有被分享者將無法看到此清單。')) return;
 
     try {
       await shared.unshareList(sharePanelSharedId);
-      // Remove sharedListId from local list
       const newData = {
         ...data,
         lists: data.lists.map(l =>
@@ -148,30 +180,12 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="bg-gray-700 text-white px-4 py-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={() => onNavigate('checklist', { sharedListId: null })}
-            className="p-2 -ml-2 rounded-lg hover:bg-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-          </button>
-          <div className="text-lg font-bold">我的清單</div>
-          <button
-            onClick={() => onNavigate('library')}
-            className="p-2 -mr-2 rounded-lg hover:bg-gray-600"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-            </svg>
-          </button>
-        </div>
+      <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
+        <div className="text-lg font-bold text-center">我的清單</div>
       </div>
 
       {/* Lists */}
-      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar">
         <div className="space-y-2">
           {(data.lists || []).map(list => {
             const itemCount = (list.items || []).length;
@@ -183,37 +197,38 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
               <div
                 key={list.id}
                 onClick={() => selectList(list.id, list.sharedListId)}
-                className={`flex items-center p-4 bg-white rounded-xl shadow-sm active:bg-gray-50 cursor-pointer
-                  ${isActive ? 'ring-2 ring-gray-400' : ''}`}
+                className={`flex items-center p-4 bg-white rounded-xl border border-slate-200 active:bg-slate-50 cursor-pointer transition-colors duration-150 min-h-[56px]
+                  ${isActive ? 'ring-2 ring-indigo-500' : ''}`}
               >
-                <span className="text-2xl mr-3">{list.icon}</span>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-800 flex items-center">
-                    {list.name}
+                <div className="mr-3 text-indigo-600">
+                  <Icon name={list.icon} size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-slate-800 flex items-center">
+                    <span className="truncate">{list.name}</span>
                     {isShared && (
-                      <span className="ml-2 text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">已分享</span>
+                      <span className="ml-2 text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-200 flex-shrink-0">已分享</span>
                     )}
                   </div>
-                  <div className="text-sm text-gray-400">{checkedCount}/{itemCount} 已確認</div>
+                  <div className="text-sm text-slate-400">{checkedCount}/{itemCount} 已確認</div>
                 </div>
                 {user && (
                   <button
                     onClick={(e) => handleShareClick(list, e)}
-                    className={`p-2 mr-1 rounded-lg ${isShared ? 'text-green-500' : 'text-gray-400'} hover:bg-gray-100`}
+                    className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
+                      ${isShared ? 'text-emerald-500 active:bg-emerald-50' : 'text-slate-400 active:bg-slate-100'}`}
+                    aria-label="分享清單"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                    </svg>
+                    <Share2 size={18} />
                   </button>
                 )}
                 {data.lists.length > 1 && (
                   <button
-                    onClick={(e) => deleteList(list.id, e)}
-                    className="p-2 text-gray-400 hover:text-red-500"
+                    onClick={(e) => handleDeleteClick(list.id, e)}
+                    className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+                    aria-label="刪除清單"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                    </svg>
+                    <Trash2 size={18} />
                   </button>
                 )}
               </div>
@@ -224,7 +239,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         {/* Shared with me section */}
         {sharedWithMeEntries.length > 0 && (
           <div className="mt-6">
-            <div className="text-sm text-gray-500 mb-2 px-1">與我分享的清單</div>
+            <div className="text-sm text-slate-500 mb-2 px-1">與我分享的清單</div>
             <div className="space-y-2">
               {sharedWithMeEntries.map(([sharedListId, sharedList]) => {
                 const itemCount = (sharedList.items || []).length;
@@ -234,14 +249,16 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                   <div
                     key={sharedListId}
                     onClick={() => selectSharedWithMe(sharedListId)}
-                    className="flex items-center p-4 bg-blue-50 rounded-xl shadow-sm active:bg-blue-100 cursor-pointer border border-blue-100"
+                    className="flex items-center p-4 bg-indigo-50 rounded-xl border border-indigo-200 active:bg-indigo-100 cursor-pointer transition-colors duration-150 min-h-[56px]"
                   >
-                    <span className="text-2xl mr-3">{sharedList.icon || '📋'}</span>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-800">{sharedList.name}</div>
-                      <div className="text-sm text-gray-400">
+                    <div className="mr-3 text-indigo-600">
+                      <Icon name={sharedList.icon || 'clipboard-list'} size={24} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-slate-800">{sharedList.name}</div>
+                      <div className="text-sm text-slate-400">
                         {checkedCount}/{itemCount} 已確認
-                        <span className="ml-2 text-blue-400">
+                        <span className="ml-2 text-indigo-500">
                           來自 {sharedList.ownerName || sharedList.ownerEmail}
                         </span>
                       </div>
@@ -254,17 +271,18 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         )}
 
         {/* Add new list */}
-        <div className="mt-4 p-4 bg-white rounded-xl shadow-sm">
-          <div className="text-sm text-gray-500 mb-3">新增清單</div>
+        <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200">
+          <div className="text-sm text-slate-500 mb-3">新增清單</div>
           <div className="flex gap-1 mb-3 flex-wrap">
-            {iconOptions.map(icon => (
+            {iconOptions.map(iconName => (
               <button
-                key={icon}
-                onClick={() => setNewListIcon(icon)}
-                className={`w-10 h-10 rounded-lg text-xl hover:bg-gray-100
-                  ${newListIcon === icon ? 'bg-gray-200' : ''}`}
+                key={iconName}
+                onClick={() => setNewListIcon(iconName)}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-150 active:bg-indigo-100
+                  ${newListIcon === iconName ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500'}`}
+                aria-label={iconName}
               >
-                {icon}
+                <Icon name={iconName} size={20} />
               </button>
             ))}
           </div>
@@ -274,26 +292,16 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
               value={newListName}
               onChange={(e) => setNewListName(e.target.value)}
               placeholder="清單名稱..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:border-gray-500"
+              className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             />
             <button
               onClick={addNewList}
-              className="px-6 py-3 bg-gray-700 text-white rounded-xl font-medium active:bg-gray-800"
+              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
             >
               建立
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Bottom: Library button */}
-      <div className="p-4 bg-white border-t border-gray-200 safe-bottom">
-        <button
-          onClick={() => onNavigate('library')}
-          className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 font-medium active:bg-gray-50"
-        >
-          管理物品庫
-        </button>
       </div>
 
       {/* Share Panel */}
@@ -304,6 +312,15 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
           onRemoveUser={handleRemoveUser}
           onUnshare={handleUnshare}
           onClose={() => { setSharePanelListId(null); setSharePanelSharedId(null); }}
+        />
+      )}
+
+      {/* Confirm delete dialog */}
+      {confirmDelete !== null && (
+        <ConfirmDialog
+          message="確定刪除此清單？"
+          onConfirm={() => deleteList(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
         />
       )}
     </div>
