@@ -207,7 +207,7 @@ export default function Checklist({
       </div>
 
       {/* Checklist content */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
         {items.length === 0 ? (
           <div className="text-center py-16 text-slate-400">
             <Inbox size={48} className="mx-auto mb-4 text-slate-300" />
@@ -276,7 +276,7 @@ export default function Checklist({
 
       {/* Bottom buttons */}
       {items.length > 0 && (
-        <div className="p-4 bg-white border-t border-slate-200 pb-24 safe-bottom">
+        <div className="p-4 bg-white border-t border-slate-200 mb-16 safe-bottom">
           <div className="flex gap-3">
             <button
               onClick={() => setConfirmAction('reset')}

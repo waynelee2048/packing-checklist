@@ -185,7 +185,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
       </div>
 
       {/* Lists */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 pb-20 no-scrollbar">
         <div className="space-y-2">
           {(data.lists || []).map(list => {
             const itemCount = (list.items || []).length;

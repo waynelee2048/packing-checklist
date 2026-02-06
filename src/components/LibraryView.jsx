@@ -161,7 +161,7 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
       </div>
 
       {/* Items list */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 pb-20 no-scrollbar">
         {categories.map(category => {
           const items = searchQuery
             ? groupedItems[category].filter(item => {
