@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Search, X, StickyNote } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Search, X, StickyNote, Camera, Loader2 } from 'lucide-react';
 import { categories } from '../utils/data';
+import { useItemPhoto } from '../hooks/useItemPhoto';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
@@ -32,13 +33,19 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
-export default function LibraryView({ data, onNavigate, onSaveData }) {
+export default function LibraryView({ data, user, onNavigate, onSaveData }) {
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState(categories[0]);
   const [newItemNote, setNewItemNote] = useState('');
+  const [newItemPhoto, setNewItemPhoto] = useState(null); // File object
+  const [newItemPhotoPreview, setNewItemPhotoPreview] = useState(null); // blob URL
   const [editingItemId, setEditingItemId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const { uploadPhoto, deletePhoto, uploading } = useItemPhoto(user);
 
   // Group items by category
   const groupedItems = {};
@@ -49,14 +56,42 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
     }
   });
 
-  const addItemToLibrary = () => {
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewItemPhoto(file);
+    setNewItemPhotoPreview(URL.createObjectURL(file));
+    // Reset input so same file can be re-selected
+    e.target.value = '';
+  };
+
+  const removeNewPhoto = () => {
+    if (newItemPhotoPreview) URL.revokeObjectURL(newItemPhotoPreview);
+    setNewItemPhoto(null);
+    setNewItemPhotoPreview(null);
+  };
+
+  const addItemToLibrary = async () => {
     if (!newItemName.trim()) return;
+    setAdding(true);
+
+    const itemId = Date.now();
+    let photoURL = undefined;
+
+    if (newItemPhoto && user) {
+      try {
+        photoURL = await uploadPhoto(itemId, newItemPhoto);
+      } catch {
+        // Photo upload failed — still create item without photo
+      }
+    }
 
     const newItem = {
-      id: Date.now(),
+      id: itemId,
       name: newItemName.trim(),
       category: newItemCategory,
-      note: newItemNote.trim()
+      note: newItemNote.trim(),
+      ...(photoURL && { photoURL })
     };
 
     const newData = {
@@ -67,20 +102,26 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
     onSaveData(newData);
     setNewItemName('');
     setNewItemNote('');
+    removeNewPhoto();
+    setAdding(false);
   };
 
-  const updateItem = (itemId, name, category, note) => {
+  const updateItem = async (itemId, name, category, note, photoURL) => {
     const newData = {
       ...data,
       itemLibrary: data.itemLibrary.map(item =>
-        item.id === itemId ? { ...item, name, category, note } : item
+        item.id === itemId ? { ...item, name, category, note, ...(photoURL ? { photoURL } : { photoURL: null }) } : item
       )
     };
     onSaveData(newData);
     setEditingItemId(null);
   };
 
-  const deleteItemFromLibrary = (itemId) => {
+  const deleteItemFromLibrary = async (itemId) => {
+    const item = data.itemLibrary.find(i => i.id === itemId);
+    if (item?.photoURL) {
+      deletePhoto(itemId);
+    }
     const newData = {
       ...data,
       itemLibrary: data.itemLibrary.filter(item => item.id !== itemId),
@@ -129,11 +170,49 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
           placeholder="備註（選填）：存放位置、提醒事項..."
           className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
+        {/* Photo section */}
+        {user && (
+          <div className="mb-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            {newItemPhotoPreview ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={newItemPhotoPreview}
+                  alt="預覽"
+                  className="w-20 h-20 object-cover rounded-lg border border-slate-200"
+                />
+                <button
+                  onClick={removeNewPhoto}
+                  className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 rounded-lg active:bg-rose-50 transition-colors duration-150"
+                >
+                  移除照片
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-500 active:bg-slate-50 transition-colors duration-150"
+              >
+                <Camera size={18} />
+                <span className="text-sm">附加照片</span>
+              </button>
+            )}
+          </div>
+        )}
         <button
           onClick={addItemToLibrary}
-          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
+          disabled={adding || uploading}
+          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          + 新增物品
+          {(adding || uploading) && <Loader2 size={18} className="animate-spin" />}
+          {(adding || uploading) ? '新增中...' : '+ 新增物品'}
         </button>
       </div>
 
@@ -178,7 +257,18 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
                 {items.map(item => (
                   <div key={item.id} className="p-3 bg-white rounded-xl border border-slate-200">
                     <div className="flex items-center justify-between min-h-[36px]">
-                      <span className="font-medium text-slate-800">{item.name}</span>
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        {item.photoURL && (
+                          <img
+                            src={item.photoURL}
+                            alt=""
+                            className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
+                            loading="lazy"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        )}
+                        <span className="font-medium text-slate-800">{item.name}</span>
+                      </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingItemId(item.id)}
@@ -212,9 +302,12 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
       {editingItem && (
         <EditItemModal
           item={editingItem}
+          user={user}
           categories={categories}
           onSave={updateItem}
           onClose={() => setEditingItemId(null)}
+          uploadPhoto={uploadPhoto}
+          deletePhoto={deletePhoto}
         />
       )}
 
@@ -230,10 +323,61 @@ export default function LibraryView({ data, onNavigate, onSaveData }) {
   );
 }
 
-function EditItemModal({ item, categories, onSave, onClose }) {
+function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, deletePhoto }) {
   const [name, setName] = useState(item.name);
   const [category, setCategory] = useState(item.category);
   const [note, setNote] = useState(item.note || '');
+  const [photoURL, setPhotoURL] = useState(item.photoURL || '');
+  const [newPhoto, setNewPhoto] = useState(null); // File for replacement
+  const [newPhotoPreview, setNewPhotoPreview] = useState(null);
+  const [photoRemoved, setPhotoRemoved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNewPhoto(file);
+    if (newPhotoPreview) URL.revokeObjectURL(newPhotoPreview);
+    setNewPhotoPreview(URL.createObjectURL(file));
+    setPhotoRemoved(false);
+    e.target.value = '';
+  };
+
+  const removePhoto = () => {
+    if (newPhotoPreview) URL.revokeObjectURL(newPhotoPreview);
+    setNewPhoto(null);
+    setNewPhotoPreview(null);
+    setPhotoRemoved(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    let finalPhotoURL = photoURL;
+
+    if (photoRemoved && !newPhoto) {
+      // Delete existing photo
+      if (item.photoURL) {
+        deletePhoto(item.id);
+      }
+      finalPhotoURL = '';
+    }
+
+    if (newPhoto && user) {
+      // Upload new/replacement photo
+      try {
+        finalPhotoURL = await uploadPhoto(item.id, newPhoto);
+      } catch {
+        // Upload failed — keep existing photo
+        finalPhotoURL = photoRemoved ? '' : photoURL;
+      }
+    }
+
+    onSave(item.id, name, category, note, finalPhotoURL);
+    setSaving(false);
+  };
+
+  const displayPhoto = newPhotoPreview || (!photoRemoved && photoURL);
 
   return (
     <div
@@ -265,8 +409,52 @@ function EditItemModal({ item, categories, onSave, onClose }) {
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="備註（選填）"
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-4 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
+        {/* Photo section */}
+        {user && (
+          <div className="mb-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoSelect}
+              className="hidden"
+            />
+            {displayPhoto ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={newPhotoPreview || photoURL}
+                  alt="照片"
+                  className="w-20 h-20 object-cover rounded-lg border border-slate-200"
+                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-sm text-indigo-600 px-3 py-1.5 border border-indigo-200 rounded-lg active:bg-indigo-50 transition-colors duration-150"
+                  >
+                    更換照片
+                  </button>
+                  <button
+                    onClick={removePhoto}
+                    className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 rounded-lg active:bg-rose-50 transition-colors duration-150"
+                  >
+                    移除照片
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-500 active:bg-slate-50 transition-colors duration-150"
+              >
+                <Camera size={18} />
+                <span className="text-sm">附加照片</span>
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex gap-3">
           <button
             onClick={onClose}
@@ -275,10 +463,12 @@ function EditItemModal({ item, categories, onSave, onClose }) {
             取消
           </button>
           <button
-            onClick={() => onSave(item.id, name, category, note)}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            儲存
+            {saving && <Loader2 size={18} className="animate-spin" />}
+            {saving ? '儲存中...' : '儲存'}
           </button>
         </div>
       </div>

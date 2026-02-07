@@ -152,7 +152,7 @@ export function useSharedLists(user, data) {
       const embeddedItems = (Array.isArray(list.items) ? list.items : [])
         .map(id => data.itemLibrary.find(item => item.id === id))
         .filter(Boolean)
-        .map(({ id, name, category, note }) => ({ id, name, category, note }));
+        .map(({ id, name, category, note, photoURL }) => ({ id, name, category, note, ...(photoURL && { photoURL }) }));
 
       // Compare with current shared items
       const currentItems = sharedData.items || [];
@@ -177,7 +177,7 @@ export function useSharedLists(user, data) {
     const embeddedItems = (Array.isArray(list.items) ? list.items : [])
       .map(id => itemLibrary.find(item => item.id === id))
       .filter(Boolean)
-      .map(({ id, name, category, note }) => ({ id, name, category, note }));
+      .map(({ id, name, category, note, photoURL }) => ({ id, name, category, note, ...(photoURL && { photoURL }) }));
 
     // Build sharedWith map
     const sharedWith = {};

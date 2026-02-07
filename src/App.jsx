@@ -55,6 +55,7 @@ function App() {
       {currentView === 'library' && (
         <LibraryView
           data={data}
+          user={user}
           onNavigate={navigate}
           onSaveData={saveData}
         />

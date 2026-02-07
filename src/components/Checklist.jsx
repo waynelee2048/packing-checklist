@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Inbox, StickyNote, Check } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera } from 'lucide-react';
 import Icon from './Icon';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -225,7 +225,8 @@ export default function Checklist({
           <div className="space-y-2">
             {items.map(item => {
               const isChecked = checkedItems.includes(item.id);
-              const hasNote = item.note && item.note.trim();
+              const hasNote = item.note?.trim();
+              const hasExtra = hasNote || item.photoURL;
               const isNoteExpanded = expandedNotes.includes(item.id);
 
               return (
@@ -233,19 +234,28 @@ export default function Checklist({
                   <div
                     onClick={() => toggleItemCheck(item.id)}
                     className={`flex items-center p-4 bg-white rounded-xl border border-slate-200 active:bg-slate-50 transition-colors duration-150 cursor-pointer min-h-[56px]
-                      ${isChecked ? 'bg-slate-50' : ''} ${isNoteExpanded ? 'rounded-b-none border-b-0' : ''}`}
+                      ${isChecked ? 'bg-slate-50' : ''} ${hasExtra && isNoteExpanded ? 'rounded-b-none border-b-0' : ''}`}
                   >
                     <div className={`w-6 h-6 border-2 rounded-full mr-4 flex items-center justify-center flex-shrink-0 transition-colors duration-150
                       ${isChecked ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'}`}>
                       {isChecked && <Check size={14} className="text-white" />}
                     </div>
+                    {item.photoURL && (
+                      <img
+                        src={item.photoURL}
+                        alt=""
+                        className="w-10 h-10 object-cover rounded-lg mr-3 flex-shrink-0"
+                        loading="lazy"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className={`${isChecked ? 'line-through text-slate-400' : 'text-slate-800'} text-lg`}>
                         {item.name}
                       </div>
                       <div className="text-xs text-slate-400">{item.category}</div>
                     </div>
-                    {hasNote && (
+                    {hasExtra && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -253,18 +263,31 @@ export default function Checklist({
                         }}
                         className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
                           ${isNoteExpanded ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400'}`}
-                        aria-label="展開備註"
+                        aria-label="展開詳情"
                       >
-                        <StickyNote size={18} />
+                        {hasNote ? <StickyNote size={18} /> : <Camera size={18} />}
                       </button>
                     )}
                   </div>
-                  {hasNote && isNoteExpanded && (
+                  {hasExtra && isNoteExpanded && (
                     <div className="px-4 py-3 bg-indigo-50 border border-slate-200 border-t-0 rounded-b-xl">
-                      <div className="flex items-start text-sm text-slate-600 gap-2">
-                        <StickyNote size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
-                        <span>{item.note}</span>
-                      </div>
+                      {hasNote && (
+                        <div className="flex items-start text-sm text-slate-600 gap-2">
+                          <StickyNote size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
+                          <span>{item.note}</span>
+                        </div>
+                      )}
+                      {item.photoURL && (
+                        <div className={hasNote ? 'mt-2' : ''}>
+                          <img
+                            src={item.photoURL}
+                            alt={item.name}
+                            className="max-w-[200px] rounded-lg"
+                            loading="lazy"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
