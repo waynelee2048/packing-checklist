@@ -26,10 +26,8 @@ html, body {
   overflow: hidden;
 }
 
-.safe-bottom::after {
-  content: '';
-  display: block;
-  height: env(safe-area-inset-bottom, 0px);
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .safe-top {
