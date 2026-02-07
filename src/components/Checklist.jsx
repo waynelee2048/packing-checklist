@@ -295,29 +295,29 @@ export default function Checklist({
             })}
           </div>
         )}
-      </div>
 
-      {/* Bottom buttons */}
-      {items.length > 0 && (
-        <div className="p-4 bg-white border-t border-slate-200">
-          <div className="flex gap-3">
-            <button
-              onClick={() => setConfirmAction('reset')}
-              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
-            >
-              重設
-            </button>
-            <button
-              onClick={() => setConfirmAction('checkAll')}
-              disabled={allChecked}
-              className={`flex-1 py-3 rounded-xl font-medium transition-colors duration-150 min-h-[44px]
-                ${allChecked ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-600 text-white active:bg-indigo-700'}`}
-            >
-              {allChecked ? '準備完成！' : '全部確認'}
-            </button>
+        {/* Bottom buttons */}
+        {items.length > 0 && (
+          <div className="pt-4 pb-16">
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAction('reset')}
+                className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+              >
+                重設
+              </button>
+              <button
+                onClick={() => setConfirmAction('checkAll')}
+                disabled={allChecked}
+                className={`flex-1 py-3 rounded-xl font-medium transition-colors duration-150 min-h-[44px]
+                  ${allChecked ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-600 text-white active:bg-indigo-700'}`}
+              >
+                {allChecked ? '準備完成！' : '全部確認'}
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {confirmAction === 'reset' && (
         <ConfirmDialog

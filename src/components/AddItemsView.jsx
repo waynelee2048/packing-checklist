@@ -183,7 +183,7 @@ export default function AddItemsView({ data, onNavigate, onSaveData }) {
       </div>
 
       {/* Bottom */}
-      <div className="p-4 bg-white border-t border-slate-200 safe-bottom">
+      <div className="p-4 bg-white border-t border-slate-200">
         <div className="text-center text-slate-500 mb-3">
           已選擇 {safeList?.items?.length || 0} 個物品
         </div>
