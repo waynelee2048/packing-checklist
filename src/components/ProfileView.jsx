@@ -1,6 +1,6 @@
-import { LogIn, LogOut, Cloud, CloudOff, Loader, AlertCircle } from 'lucide-react';
+import { LogIn, LogOut, Cloud, CloudOff, Loader, AlertCircle, LayoutDashboard } from 'lucide-react';
 
-export default function ProfileView({ user, syncStatus, onLogin, onLogout }) {
+export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNavigate, isAdmin }) {
   const statusConfig = {
     offline: { icon: CloudOff, color: 'text-slate-400', label: '離線模式', bg: 'bg-slate-50' },
     syncing: { icon: Loader, color: 'text-amber-500', label: '同步中...', bg: 'bg-amber-50' },
@@ -70,6 +70,17 @@ export default function ProfileView({ user, syncStatus, onLogin, onLogout }) {
             <span className={`font-medium ${status.color}`}>{status.label}</span>
           </div>
         </div>
+
+        {/* Admin button */}
+        {user && isAdmin && (
+          <button
+            onClick={() => onNavigate('admin')}
+            className="w-full flex items-center justify-center gap-2 py-3 mb-4 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150"
+          >
+            <LayoutDashboard size={18} />
+            管理後台
+          </button>
+        )}
 
         {/* App info */}
         <div className="bg-white border border-slate-200 rounded-xl p-4">

@@ -29,7 +29,8 @@ export const defaultData = {
     { id: 1, name: '日常出門', icon: 'footprints', items: [1, 2, 3, 4, 8, 9], checkedItems: [] },
     { id: 2, name: '上班通勤', icon: 'briefcase', items: [1, 2, 3, 4, 5, 6, 7, 8], checkedItems: [] },
   ],
-  activeListId: 1
+  activeListId: 1,
+  templates: []
 };
 
 // Email encoding for Firebase keys (. → ,)
@@ -64,7 +65,8 @@ export function sanitizeData(data) {
       checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : [],
       ...(list.sharedListId ? { sharedListId: list.sharedListId } : {})
     })) : defaultData.lists,
-    activeListId: data.activeListId || defaultData.activeListId
+    activeListId: data.activeListId || defaultData.activeListId,
+    templates: Array.isArray(data.templates) ? data.templates : []
   };
 }
 
