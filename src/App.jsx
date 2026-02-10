@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Agentation } from 'agentation';
 import { useFirebase } from './hooks/useFirebase';
 import { useSharedLists } from './hooks/useSharedLists';
 import { useAdmin } from './hooks/useAdmin';
@@ -105,6 +106,7 @@ function App() {
       {needRefresh && (
         <UpdatePrompt onRefresh={refresh} onDismiss={dismiss} />
       )}
+      {import.meta.env.DEV && <Agentation />}
     </>
   );
 }

@@ -79,3 +79,49 @@ html, body {
 .animate-slide-down {
   animation: slide-down 0.15s ease-out;
 }
+
+@keyframes check-bounce {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.3); }
+  65% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+.animate-check-bounce {
+  animation: check-bounce 0.3s ease-out;
+}
+
+@keyframes check-icon-in {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+.animate-check-icon-in {
+  animation: check-icon-in 0.2s ease-out;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10vh) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti-fall 2s ease-in forwards;
+}
+
+@keyframes celebration-text {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.2); opacity: 1; }
+  75% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-celebration-text {
+  animation: celebration-text 0.5s ease-out;
+}

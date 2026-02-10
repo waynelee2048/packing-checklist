@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Search, X, StickyNote, Camera, Loader2 } from 'lucide-react';
+import { Search, X, StickyNote, Camera, Loader2, Plus } from 'lucide-react';
 import { categories } from '../utils/data';
 import { useItemPhoto } from '../hooks/useItemPhoto';
 
@@ -43,6 +43,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [adding, setAdding] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const fileInputRef = useRef(null);
 
   const { uploadPhoto, deletePhoto, uploading } = useItemPhoto(user);
@@ -104,6 +105,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
     setNewItemNote('');
     removeNewPhoto();
     setAdding(false);
+    setShowAddForm(false);
   };
 
   const updateItem = async (itemId, name, category, note, photoURL) => {
@@ -142,78 +144,6 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
       {/* Header */}
       <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
         <div className="text-lg font-bold text-center">物品庫</div>
-      </div>
-
-      {/* Add new item form */}
-      <div className="p-4 bg-white border-b border-slate-200">
-        <div className="text-sm text-slate-500 mb-2">新增物品</div>
-        <input
-          type="text"
-          value={newItemName}
-          onChange={(e) => setNewItemName(e.target.value)}
-          placeholder="物品名稱..."
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-        />
-        <select
-          value={newItemCategory}
-          onChange={(e) => setNewItemCategory(e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 bg-white focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-        >
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          value={newItemNote}
-          onChange={(e) => setNewItemNote(e.target.value)}
-          placeholder="備註（選填）：存放位置、提醒事項..."
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-        />
-        {/* Photo section */}
-        {user && (
-          <div className="mb-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handlePhotoSelect}
-              className="hidden"
-            />
-            {newItemPhotoPreview ? (
-              <div className="flex items-center gap-3">
-                <img
-                  src={newItemPhotoPreview}
-                  alt="預覽"
-                  className="w-20 h-20 object-cover rounded-lg border border-slate-200"
-                />
-                <button
-                  onClick={removeNewPhoto}
-                  className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 rounded-lg active:bg-rose-50 transition-colors duration-150"
-                >
-                  移除照片
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-500 active:bg-slate-50 transition-colors duration-150"
-              >
-                <Camera size={18} />
-                <span className="text-sm">附加照片</span>
-              </button>
-            )}
-          </div>
-        )}
-        <button
-          onClick={addItemToLibrary}
-          disabled={adding || uploading}
-          className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {(adding || uploading) && <Loader2 size={18} className="animate-spin" />}
-          {(adding || uploading) ? '新增中...' : '+ 新增物品'}
-        </button>
       </div>
 
       {/* Search bar */}
@@ -297,6 +227,106 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
           );
         })}
       </div>
+
+      {/* FAB */}
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="fixed right-4 bottom-20 z-30 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center active:bg-indigo-700 transition-colors duration-150"
+        aria-label="新增物品"
+      >
+        <Plus size={24} />
+      </button>
+
+      {/* Add item bottom sheet */}
+      {showAddForm && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
+          onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); }}
+        >
+          <div
+            className="bg-white w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-lg font-bold text-slate-900">新增物品</div>
+              <button
+                onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); }}
+                className="p-1 rounded-lg active:bg-slate-100"
+              >
+                <X size={20} className="text-slate-400" />
+              </button>
+            </div>
+            <input
+              type="text"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              placeholder="物品名稱..."
+              autoFocus
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+            />
+            <select
+              value={newItemCategory}
+              onChange={(e) => setNewItemCategory(e.target.value)}
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 bg-white focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={newItemNote}
+              onChange={(e) => setNewItemNote(e.target.value)}
+              placeholder="備註（選填）：存放位置、提醒事項..."
+              className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+            />
+            {/* Photo section */}
+            {user && (
+              <div className="mb-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+                {newItemPhotoPreview ? (
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={newItemPhotoPreview}
+                      alt="預覽"
+                      className="w-20 h-20 object-cover rounded-lg border border-slate-200"
+                    />
+                    <button
+                      onClick={removeNewPhoto}
+                      className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 rounded-lg active:bg-rose-50 transition-colors duration-150"
+                    >
+                      移除照片
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-500 active:bg-slate-50 transition-colors duration-150"
+                  >
+                    <Camera size={18} />
+                    <span className="text-sm">附加照片</span>
+                  </button>
+                )}
+              </div>
+            )}
+            <button
+              onClick={addItemToLibrary}
+              disabled={adding || uploading}
+              className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {(adding || uploading) && <Loader2 size={18} className="animate-spin" />}
+              {(adding || uploading) ? '新增中...' : '+ 新增物品'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit modal */}
       {editingItem && (
