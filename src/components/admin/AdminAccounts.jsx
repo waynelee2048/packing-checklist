@@ -23,18 +23,18 @@ export default function AdminAccounts({ user, admin }) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-slate-900 mb-4">帳號管理</h2>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">帳號管理</h2>
 
       {/* Add admin */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 mb-4">
-        <h3 className="font-semibold text-slate-900 mb-3">新增管理員</h3>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4">
+        <h3 className="font-semibold text-slate-900 dark:text-slate-50 mb-3">新增管理員</h3>
         <form onSubmit={handleAdd} className="flex gap-2">
           <input
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="輸入 email 地址"
-            className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button type="submit" disabled={!email.trim()} className="flex items-center gap-1.5 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
             <Plus size={16} /> 新增
@@ -43,9 +43,9 @@ export default function AdminAccounts({ user, admin }) {
       </div>
 
       {/* Admin list */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-          <h3 className="font-semibold text-slate-900 text-sm">管理員清單 ({adminEmails.length})</h3>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700">
+          <h3 className="font-semibold text-slate-900 dark:text-slate-50 text-sm">管理員清單 ({adminEmails.length})</h3>
         </div>
         {adminEmails.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">
@@ -58,16 +58,16 @@ export default function AdminAccounts({ user, admin }) {
             {adminEmails.map(adminEmail => {
               const isSelf = user?.email?.toLowerCase() === adminEmail;
               return (
-                <li key={adminEmail} className="flex items-center justify-between px-4 py-3 border-b border-slate-100 last:border-0">
+                <li key={adminEmail} className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700 last:border-0">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Shield size={16} className="text-indigo-500 shrink-0" />
-                    <span className="text-sm text-slate-800 truncate">{adminEmail}</span>
-                    {isSelf && <span className="text-xs bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded-full shrink-0">你</span>}
+                    <Shield size={16} className="text-indigo-500 dark:text-indigo-400 shrink-0" />
+                    <span className="text-sm text-slate-800 dark:text-slate-100 truncate">{adminEmail}</span>
+                    {isSelf && <span className="text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-1.5 py-0.5 rounded-full shrink-0">你</span>}
                   </div>
                   <button
                     onClick={() => handleRemove(adminEmail)}
                     disabled={isSelf}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent shrink-0"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded disabled:opacity-30 disabled:hover:text-slate-400 disabled:hover:bg-transparent shrink-0"
                     title={isSelf ? '無法移除自己' : '移除管理員'}
                   >
                     <Trash2 size={16} />

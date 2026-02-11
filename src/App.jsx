@@ -4,6 +4,7 @@ import { useFirebase } from './hooks/useFirebase';
 import { useSharedLists } from './hooks/useSharedLists';
 import { useAdmin } from './hooks/useAdmin';
 import { usePWA } from './hooks/usePWA';
+import { useTheme } from './hooks/useTheme';
 import { loadFromLocal } from './utils/data';
 import Checklist from './components/Checklist';
 import ListsView from './components/ListsView';
@@ -22,6 +23,7 @@ function App() {
   const shared = useSharedLists(user, data);
   const admin = useAdmin(user);
   const { needRefresh, refresh, dismiss } = usePWA();
+  const { preference: themePreference, changeTheme: onThemeChange } = useTheme();
 
   const navigate = (view, params) => {
     if (params?.sharedListId !== undefined) {
@@ -79,6 +81,8 @@ function App() {
           onLogout={handleLogout}
           onNavigate={navigate}
           isAdmin={admin.isAdmin}
+          themePreference={themePreference}
+          onThemeChange={onThemeChange}
         />
       )}
       {currentView === 'admin' && admin.isAdmin && (
@@ -93,8 +97,8 @@ function App() {
       )}
       {currentView === 'admin' && !admin.isAdmin && !admin.loading && (
         <div className="flex flex-col items-center justify-center h-screen p-4">
-          <p className="text-slate-500 mb-4">你沒有管理後台的存取權限</p>
-          <button onClick={() => navigate('profile')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">返回設定</button>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">你沒有管理後台的存取權限</p>
+          <button onClick={() => navigate('profile')} className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg">返回設定</button>
         </div>
       )}
       {showTabBar && (

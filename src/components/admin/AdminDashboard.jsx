@@ -35,7 +35,7 @@ export default function AdminDashboard({ data, shared }) {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-slate-900 mb-4">數據總覽</h2>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">數據總覽</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatsCard icon={Package} label="物品總數" value={itemCount} color="text-indigo-600" />
@@ -46,10 +46,10 @@ export default function AdminDashboard({ data, shared }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category stats */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <BarChart3 size={18} className="text-slate-500" />
-            <h3 className="font-semibold text-slate-900">分類統計</h3>
+            <BarChart3 size={18} className="text-slate-500 dark:text-slate-400" />
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50">分類統計</h3>
           </div>
           {sortedCategories.length === 0 ? (
             <p className="text-sm text-slate-400">尚無物品</p>
@@ -58,10 +58,10 @@ export default function AdminDashboard({ data, shared }) {
               {sortedCategories.map(([category, count]) => (
                 <div key={category}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-700">{category}</span>
-                    <span className="text-slate-500">{count}</span>
+                    <span className="text-slate-700 dark:text-slate-200">{category}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{count}</span>
                   </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-indigo-500 rounded-full transition-all"
                       style={{ width: `${(count / maxCategoryCount) * 100}%` }}
@@ -74,22 +74,22 @@ export default function AdminDashboard({ data, shared }) {
         </div>
 
         {/* Top 5 items */}
-        <div className="bg-white border border-slate-200 rounded-xl p-6">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Package size={18} className="text-slate-500" />
-            <h3 className="font-semibold text-slate-900">最常使用物品 Top 5</h3>
+            <Package size={18} className="text-slate-500 dark:text-slate-400" />
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50">最常使用物品 Top 5</h3>
           </div>
           {top5.length === 0 ? (
             <p className="text-sm text-slate-400">尚無資料</p>
           ) : (
             <div className="space-y-2">
               {top5.map((item, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
+                <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-slate-400 w-5">{i + 1}</span>
-                    <span className="text-slate-800">{item.name}</span>
+                    <span className="text-slate-800 dark:text-slate-100">{item.name}</span>
                   </div>
-                  <span className="text-sm text-slate-500">出現在 {item.count} 個清單</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">出現在 {item.count} 個清單</span>
                 </div>
               ))}
             </div>

@@ -8,15 +8,15 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
       <div className="absolute inset-0 bg-black bg-opacity-50" />
       <div
-        className="relative w-full max-w-lg bg-white rounded-t-2xl animate-slide-up safe-bottom"
+        className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
-          <p className="text-center text-lg text-slate-800 mb-6">{message}</p>
+          <p className="text-center text-lg text-slate-800 dark:text-slate-100 mb-6">{message}</p>
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+              className="flex-1 py-3 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-xl font-medium active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[44px]"
             >
               取消
             </button>
@@ -142,12 +142,12 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
   return (
     <div className="flex flex-col h-screen pb-16">
       {/* Header */}
-      <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
+      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
         <div className="text-lg font-bold text-center">物品庫</div>
       </div>
 
       {/* Search bar */}
-      <div className="px-4 py-2 bg-white border-b border-slate-200">
+      <div className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -155,7 +155,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜尋物品..."
-            className="w-full pl-9 pr-8 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+            className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
           />
           {searchQuery && (
             <button
@@ -182,10 +182,10 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
 
           return (
             <div key={category} className="mb-4">
-              <div className="text-sm text-indigo-600 font-semibold mb-2">{category}</div>
+              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mb-2">{category}</div>
               <div className="space-y-2">
                 {items.map(item => (
-                  <div key={item.id} className="p-3 bg-white rounded-xl border border-slate-200">
+                  <div key={item.id} className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                     <div className="flex items-center justify-between min-h-[36px]">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         {item.photoURL && (
@@ -197,18 +197,18 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
                             onError={(e) => { e.target.style.display = 'none'; }}
                           />
                         )}
-                        <span className="font-medium text-slate-800">{item.name}</span>
+                        <span className="font-medium text-slate-800 dark:text-slate-100">{item.name}</span>
                       </div>
                       <div className="flex gap-2">
                         <button
                           onClick={() => setEditingItemId(item.id)}
-                          className="text-sm text-slate-400 px-2 py-1 rounded active:bg-slate-100 transition-colors duration-150 min-h-[32px]"
+                          className="text-sm text-slate-400 px-2 py-1 rounded active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[32px]"
                         >
                           編輯
                         </button>
                         <button
                           onClick={() => setConfirmDeleteId(item.id)}
-                          className="text-sm text-rose-400 px-2 py-1 rounded active:bg-rose-50 transition-colors duration-150 min-h-[32px]"
+                          className="text-sm text-rose-400 px-2 py-1 rounded active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150 min-h-[32px]"
                         >
                           刪除
                         </button>
@@ -231,7 +231,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
       {/* FAB */}
       <button
         onClick={() => setShowAddForm(true)}
-        className="fixed right-4 bottom-20 z-30 w-14 h-14 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center active:bg-indigo-700 transition-colors duration-150"
+        className="fixed right-4 bottom-20 z-30 w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg flex items-center justify-center active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150"
         aria-label="新增物品"
       >
         <Plus size={24} />
@@ -244,14 +244,14 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
           onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); }}
         >
           <div
-            className="bg-white w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
+            className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-bold text-slate-900">新增物品</div>
+              <div className="text-lg font-bold text-slate-900 dark:text-slate-50">新增物品</div>
               <button
                 onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); }}
-                className="p-1 rounded-lg active:bg-slate-100"
+                className="p-1 rounded-lg active:bg-slate-100 dark:active:bg-slate-700"
               >
                 <X size={20} className="text-slate-400" />
               </button>
@@ -262,12 +262,12 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
               onChange={(e) => setNewItemName(e.target.value)}
               placeholder="物品名稱..."
               autoFocus
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+              className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             />
             <select
               value={newItemCategory}
               onChange={(e) => setNewItemCategory(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 bg-white focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+              className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             >
               {categories.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
@@ -278,7 +278,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
               value={newItemNote}
               onChange={(e) => setNewItemNote(e.target.value)}
               placeholder="備註（選填）：存放位置、提醒事項..."
-              className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 text-slate-600 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+              className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             />
             {/* Photo section */}
             {user && (
@@ -296,11 +296,11 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
                     <img
                       src={newItemPhotoPreview}
                       alt="預覽"
-                      className="w-20 h-20 object-cover rounded-lg border border-slate-200"
+                      className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
                     />
                     <button
                       onClick={removeNewPhoto}
-                      className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 rounded-lg active:bg-rose-50 transition-colors duration-150"
+                      className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 dark:border-rose-800 rounded-lg active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
                     >
                       移除照片
                     </button>
@@ -308,7 +308,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
                 ) : (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-500 active:bg-slate-50 transition-colors duration-150"
+                    className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 active:bg-slate-50 dark:active:bg-slate-700 transition-colors duration-150"
                   >
                     <Camera size={18} />
                     <span className="text-sm">附加照片</span>
@@ -319,7 +319,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
             <button
               onClick={addItemToLibrary}
               disabled={adding || uploading}
-              className="w-full py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {(adding || uploading) && <Loader2 size={18} className="animate-spin" />}
               {(adding || uploading) ? '新增中...' : '+ 新增物品'}
@@ -415,20 +415,20 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-lg rounded-t-2xl p-6 safe-bottom"
+        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-lg font-bold mb-4 text-slate-900">編輯物品</div>
+        <div className="text-lg font-bold mb-4 text-slate-900 dark:text-slate-50">編輯物品</div>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 bg-white focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         >
           {categories.map(cat => (
             <option key={cat} value={cat}>{cat}</option>
@@ -439,7 +439,7 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="備註（選填）"
-          className="w-full px-4 py-3 border border-slate-300 rounded-xl mb-2 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
         {/* Photo section */}
         {user && (
@@ -457,18 +457,18 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
                 <img
                   src={newPhotoPreview || photoURL}
                   alt="照片"
-                  className="w-20 h-20 object-cover rounded-lg border border-slate-200"
+                  className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
                 />
                 <div className="flex flex-col gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="text-sm text-indigo-600 px-3 py-1.5 border border-indigo-200 rounded-lg active:bg-indigo-50 transition-colors duration-150"
+                    className="text-sm text-indigo-600 dark:text-indigo-400 px-3 py-1.5 border border-indigo-200 dark:border-indigo-800 rounded-lg active:bg-indigo-50 dark:active:bg-indigo-900/30 transition-colors duration-150"
                   >
                     更換照片
                   </button>
                   <button
                     onClick={removePhoto}
-                    className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 rounded-lg active:bg-rose-50 transition-colors duration-150"
+                    className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 dark:border-rose-800 rounded-lg active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
                   >
                     移除照片
                   </button>
@@ -477,7 +477,7 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
             ) : (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-500 active:bg-slate-50 transition-colors duration-150"
+                className="flex items-center gap-2 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 active:bg-slate-50 dark:active:bg-slate-700 transition-colors duration-150"
               >
                 <Camera size={18} />
                 <span className="text-sm">附加照片</span>
@@ -488,14 +488,14 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 py-3 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+            className="flex-1 py-3 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-slate-600 dark:text-slate-300 active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[44px]"
           >
             取消
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving && <Loader2 size={18} className="animate-spin" />}
             {saving ? '儲存中...' : '儲存'}

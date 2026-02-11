@@ -25,26 +25,26 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-slate-200">
-        <h1 className="text-lg font-bold text-slate-900">管理後台</h1>
-        <p className="text-xs text-slate-500 mt-0.5">{user?.displayName || user?.email}</p>
+      <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+        <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">管理後台</h1>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{user?.displayName || user?.email}</p>
       </div>
       <nav className="flex-1 p-2">
         {sections.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => handleNav(key)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeSection === key ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeSection === key ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100'}`}
           >
             <Icon size={18} />
             {label}
           </button>
         ))}
       </nav>
-      <div className="p-2 border-t border-slate-200">
+      <div className="p-2 border-t border-slate-200 dark:border-slate-700">
         <button
           onClick={() => onNavigate('profile')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
         >
           <ArrowLeft size={18} />
           返回應用
@@ -71,10 +71,10 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
   };
 
   return (
-    <div className="h-screen bg-slate-50">
+    <div className="h-screen bg-slate-50 dark:bg-slate-900">
       {/* Desktop layout */}
       <div className="hidden lg:grid lg:grid-cols-[240px_1fr] h-full">
-        <aside className="bg-white border-r border-slate-200 overflow-y-auto">
+        <aside className="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
           {sidebarContent}
         </aside>
         <main className="overflow-y-auto p-6">
@@ -86,14 +86,14 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
 
       {/* Mobile layout */}
       <div className="lg:hidden flex flex-col h-full">
-        <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between safe-top">
-          <button onClick={() => setSidebarOpen(true)} className="p-1 -ml-1 text-slate-600">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between safe-top">
+          <button onClick={() => setSidebarOpen(true)} className="p-1 -ml-1 text-slate-600 dark:text-slate-300">
             <Menu size={24} />
           </button>
-          <h1 className="text-lg font-bold text-slate-900">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">
             {sections.find(s => s.key === activeSection)?.label || '管理後台'}
           </h1>
-          <button onClick={() => onNavigate('profile')} className="p-1 -mr-1 text-slate-600">
+          <button onClick={() => onNavigate('profile')} className="p-1 -mr-1 text-slate-600 dark:text-slate-300">
             <ArrowLeft size={24} />
           </button>
         </header>
@@ -102,9 +102,9 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
         {sidebarOpen && (
           <>
             <div className="fixed inset-0 bg-black/40 z-40" onClick={() => setSidebarOpen(false)} />
-            <div className="fixed inset-y-0 left-0 w-64 bg-white z-50 shadow-xl safe-top">
-              <div className="flex items-center justify-between p-4 border-b border-slate-200">
-                <h1 className="text-lg font-bold text-slate-900">管理後台</h1>
+            <div className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-slate-800 z-50 shadow-xl safe-top">
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">管理後台</h1>
                 <button onClick={() => setSidebarOpen(false)} className="p-1 text-slate-400">
                   <X size={20} />
                 </button>
@@ -114,17 +114,17 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
                   <button
                     key={key}
                     onClick={() => handleNav(key)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeSection === key ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeSection === key ? 'bg-indigo-50 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'}`}
                   >
                     <Icon size={18} />
                     {label}
                   </button>
                 ))}
               </nav>
-              <div className="absolute bottom-0 left-0 right-0 p-2 border-t border-slate-200 bg-white safe-bottom">
+              <div className="absolute bottom-0 left-0 right-0 p-2 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 safe-bottom">
                 <button
                   onClick={() => onNavigate('profile')}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
                 >
                   <ArrowLeft size={18} />
                   返回應用

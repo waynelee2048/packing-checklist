@@ -8,21 +8,21 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
       <div className="absolute inset-0 bg-black bg-opacity-50" />
       <div
-        className="relative w-full max-w-lg bg-white rounded-t-2xl animate-slide-up safe-bottom"
+        className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
-          <p className="text-center text-lg text-slate-800 mb-6">{message}</p>
+          <p className="text-center text-lg text-slate-800 dark:text-slate-100 mb-6">{message}</p>
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+              className="flex-1 py-3 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-xl font-medium active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[44px]"
             >
               取消
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
+              className="flex-1 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
             >
               確定
             </button>
@@ -57,7 +57,7 @@ function CelebrationOverlay() {
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="animate-celebration-text text-center">
           <div className="text-6xl mb-2">🎉</div>
-          <div className="text-2xl font-bold text-indigo-600 bg-white bg-opacity-90 px-6 py-3 rounded-2xl shadow-lg">
+          <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-800 bg-opacity-90 dark:bg-opacity-90 px-6 py-3 rounded-2xl shadow-lg">
             準備完成！
           </div>
         </div>
@@ -259,12 +259,12 @@ export default function Checklist({
       <div key={item.id}>
         <div
           onClick={() => toggleItemCheck(item.id)}
-          className={`flex items-center p-4 bg-white rounded-xl border border-slate-200 active:bg-slate-50 transition-colors duration-150 cursor-pointer min-h-[56px]
-            ${isChecked ? 'bg-slate-50' : ''} ${hasExtra && isNoteExpanded ? 'rounded-b-none border-b-0' : ''}`}
+          className={`flex items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 active:bg-slate-50 dark:active:bg-slate-700 transition-colors duration-150 cursor-pointer min-h-[56px]
+            ${isChecked ? 'bg-slate-50 dark:bg-slate-800/50' : ''} ${hasExtra && isNoteExpanded ? 'rounded-b-none border-b-0' : ''}`}
         >
           <div
             className={`w-6 h-6 border-2 rounded-full mr-4 flex items-center justify-center flex-shrink-0 transition-colors duration-150
-              ${isChecked ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'}
+              ${isChecked ? 'border-indigo-600 bg-indigo-600 dark:border-indigo-500 dark:bg-indigo-500' : 'border-slate-300 dark:border-slate-600'}
               ${isJustToggled && isChecked ? 'animate-check-bounce' : ''}`}
             onAnimationEnd={() => setLastToggledId(null)}
           >
@@ -285,7 +285,7 @@ export default function Checklist({
             />
           )}
           <div className="flex-1 min-w-0">
-            <div className={`text-lg transition-all duration-300 ${isChecked ? 'line-through text-slate-400 opacity-60' : 'text-slate-800'}`}>
+            <div className={`text-lg transition-all duration-300 ${isChecked ? 'line-through text-slate-400 dark:text-slate-500 opacity-60' : 'text-slate-800 dark:text-slate-100'}`}>
               {item.name}
             </div>
           </div>
@@ -296,7 +296,7 @@ export default function Checklist({
                 toggleNoteExpand(item.id);
               }}
               className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
-                ${isNoteExpanded ? 'bg-indigo-50 text-indigo-600' : 'text-slate-400'}`}
+                ${isNoteExpanded ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400' : 'text-slate-400'}`}
               aria-label="展開詳情"
             >
               <ChevronDown size={18} className={`transition-transform duration-200 ${isNoteExpanded ? 'rotate-180' : ''}`} />
@@ -304,9 +304,9 @@ export default function Checklist({
           )}
         </div>
         {hasExtra && isNoteExpanded && (
-          <div className="px-4 py-3 bg-indigo-50 border border-slate-200 border-t-0 rounded-b-xl">
+          <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border border-slate-200 dark:border-slate-700 border-t-0 rounded-b-xl">
             {hasNote && (
-              <div className="flex items-start text-sm text-slate-600 gap-2">
+              <div className="flex items-start text-sm text-slate-600 dark:text-slate-300 gap-2">
                 <StickyNote size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
                 <span>{item.note}</span>
               </div>
@@ -331,38 +331,38 @@ export default function Checklist({
   return (
     <div className="flex flex-col h-screen pb-16">
       {/* Header */}
-      <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
+      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Icon name={displayIcon} size={22} className="text-indigo-600 flex-shrink-0" />
+            <Icon name={displayIcon} size={22} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
             <span className="text-lg font-bold truncate">{displayName}</span>
             {mode === 'shared-with-me' && ownerLabel && (
-              <span className="text-xs text-indigo-500 flex-shrink-0">來自 {ownerLabel}</span>
+              <span className="text-xs text-indigo-500 dark:text-indigo-400 flex-shrink-0">來自 {ownerLabel}</span>
             )}
             {mode === 'own-shared' && (
-              <span className="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-200 flex-shrink-0">已分享</span>
+              <span className="text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
             )}
           </div>
           {mode !== 'shared-with-me' && (
             <button
               onClick={() => onNavigate('addItems')}
-              className="p-2 -mr-2 rounded-lg active:bg-slate-100 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="p-2 -mr-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
               aria-label="新增物品"
             >
-              <Plus size={22} className="text-indigo-600" />
+              <Plus size={22} className="text-indigo-600 dark:text-indigo-400" />
             </button>
           )}
         </div>
         {/* Progress bar */}
         {totalCount > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-slate-500 mb-1">
+            <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-1">
               <span>完成進度</span>
               <span>{checkedCount}/{totalCount}</span>
             </div>
-            <div className="h-2 bg-indigo-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-600 transition-all duration-300"
+                className="h-full bg-indigo-600 dark:bg-indigo-500 transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -374,12 +374,12 @@ export default function Checklist({
       <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4 no-scrollbar">
         {items.length === 0 ? (
           <div className="text-center py-16 text-slate-400">
-            <Inbox size={48} className="mx-auto mb-4 text-slate-300" />
+            <Inbox size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
             <div className="text-lg mb-2">清單是空的</div>
             {mode !== 'shared-with-me' && (
               <button
                 onClick={() => onNavigate('addItems')}
-                className="text-indigo-600 font-medium active:text-indigo-700 transition-colors duration-150"
+                className="text-indigo-600 dark:text-indigo-400 font-medium active:text-indigo-700 dark:active:text-indigo-300 transition-colors duration-150"
               >
                 從物品庫加入物品
               </button>
@@ -404,8 +404,8 @@ export default function Checklist({
                       size={16}
                       className={`text-slate-400 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
                     />
-                    <span className="text-sm font-semibold text-slate-600">{category}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${catAllChecked ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{category}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${catAllChecked ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
                       {catCheckedCount}/{catTotalCount}
                     </span>
                   </button>
@@ -427,7 +427,7 @@ export default function Checklist({
             <div className="flex gap-3">
               <button
                 onClick={() => setConfirmAction('reset')}
-                className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+                className="flex-1 py-3 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-xl font-medium active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[44px]"
               >
                 <RotateCcw size={16} className="inline mr-1.5 -mt-0.5" />重設
               </button>
@@ -435,7 +435,7 @@ export default function Checklist({
                 onClick={() => setConfirmAction('checkAll')}
                 disabled={allChecked}
                 className={`flex-1 py-3 rounded-xl font-medium transition-colors duration-150 min-h-[44px]
-                  ${allChecked ? 'bg-indigo-100 text-indigo-400' : 'bg-indigo-600 text-white active:bg-indigo-700'}`}
+                  ${allChecked ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-400' : 'bg-indigo-600 dark:bg-indigo-500 text-white active:bg-indigo-700 dark:active:bg-indigo-600'}`}
               >
                 <CheckCheck size={16} className="inline mr-1.5 -mt-0.5" />{allChecked ? '準備完成！' : '全部確認'}
               </button>

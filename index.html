@@ -13,7 +13,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <title>打包清單</title>
 </head>
-<body class="bg-white min-h-screen">
+<body class="bg-white dark:bg-slate-900 min-h-screen">
+  <script>
+    (function(){try{var t=localStorage.getItem('packing-checklist-theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(d){document.documentElement.classList.add('dark');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#0f172a')}}catch(e){}})();
+  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

@@ -9,7 +9,7 @@ const tabs = [
 
 export default function BottomTabBar({ currentView, onNavigate }) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 z-40">
       <div className="flex">
         {tabs.map(tab => {
           const isActive = currentView === tab.id;
@@ -19,7 +19,7 @@ export default function BottomTabBar({ currentView, onNavigate }) {
               key={tab.id}
               onClick={() => onNavigate(tab.id)}
               className={`flex-1 flex flex-col items-center justify-center min-h-16 py-2 transition-colors duration-150
-                ${isActive ? 'text-indigo-600' : 'text-slate-400 active:text-slate-600'}`}
+                ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 active:text-slate-600 dark:active:text-slate-300'}`}
               aria-label={tab.label}
             >
               <IconComp size={22} strokeWidth={isActive ? 2.5 : 2} />

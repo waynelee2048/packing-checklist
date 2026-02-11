@@ -37,12 +37,12 @@ export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnsh
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose} />
-      <div className="relative w-full max-w-lg bg-white rounded-t-2xl animate-slide-up safe-bottom">
+      <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom">
         <div className="p-4">
           {/* Handle bar */}
-          <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto mb-4" />
+          <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-4" />
 
-          <div className="text-lg font-bold text-slate-800 mb-4">分享清單</div>
+          <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">分享清單</div>
 
           {/* Add email input */}
           <div className="flex gap-2 mb-2">
@@ -52,11 +52,11 @@ export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnsh
               onChange={(e) => { setEmail(e.target.value); setError(''); }}
               onKeyDown={handleKeyDown}
               placeholder="輸入 Gmail 帳號..."
-              className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+              className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             />
             <button
               onClick={handleAdd}
-              className="px-5 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
+              className="px-5 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
             >
               新增
             </button>
@@ -66,11 +66,11 @@ export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnsh
           {/* Shared users list */}
           {sharedEmails.length > 0 && (
             <div className="mt-4">
-              <div className="text-sm text-slate-500 mb-2">已分享給</div>
+              <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">已分享給</div>
               <div className="space-y-2">
                 {sharedEmails.map(e => (
-                  <div key={e} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-200">
-                    <span className="text-slate-700 text-sm truncate flex-1">{e}</span>
+                  <div key={e} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                    <span className="text-slate-700 dark:text-slate-200 text-sm truncate flex-1">{e}</span>
                     <button
                       onClick={() => onRemoveUser(e)}
                       className="ml-2 p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors duration-150"
@@ -88,7 +88,7 @@ export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnsh
           {sharedEmails.length > 0 && (
             <button
               onClick={onUnshare}
-              className="w-full mt-4 py-3 border border-rose-300 text-rose-500 rounded-xl font-medium active:bg-rose-50 transition-colors duration-150 min-h-[44px]"
+              className="w-full mt-4 py-3 border border-rose-300 dark:border-rose-800 text-rose-500 rounded-xl font-medium active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150 min-h-[44px]"
             >
               停止分享
             </button>
@@ -97,7 +97,7 @@ export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnsh
           {/* Close button */}
           <button
             onClick={onClose}
-            className="w-full mt-3 py-3 text-slate-500 font-medium min-h-[44px]"
+            className="w-full mt-3 py-3 text-slate-500 dark:text-slate-400 font-medium min-h-[44px]"
           >
             關閉
           </button>

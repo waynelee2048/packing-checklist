@@ -9,15 +9,15 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={onCancel}>
       <div className="absolute inset-0 bg-black bg-opacity-50" />
       <div
-        className="relative w-full max-w-lg bg-white rounded-t-2xl animate-slide-up safe-bottom"
+        className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
-          <p className="text-center text-lg text-slate-800 mb-6">{message}</p>
+          <p className="text-center text-lg text-slate-800 dark:text-slate-100 mb-6">{message}</p>
           <div className="flex gap-3">
             <button
               onClick={onCancel}
-              className="flex-1 py-3 text-slate-600 border border-slate-300 rounded-xl font-medium active:bg-slate-100 transition-colors duration-150 min-h-[44px]"
+              className="flex-1 py-3 text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-xl font-medium active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[44px]"
             >
               取消
             </button>
@@ -180,7 +180,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
   return (
     <div className="flex flex-col h-screen pb-16">
       {/* Header */}
-      <div className="bg-white text-slate-900 px-4 py-3 border-b border-slate-200 safe-top">
+      <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
         <div className="text-lg font-bold text-center">我的清單</div>
       </div>
 
@@ -197,17 +197,17 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
               <div
                 key={list.id}
                 onClick={() => selectList(list.id, list.sharedListId)}
-                className={`flex items-center p-4 bg-white rounded-xl border border-slate-200 active:bg-slate-50 cursor-pointer transition-colors duration-150 min-h-[56px]
+                className={`flex items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 active:bg-slate-50 dark:active:bg-slate-700 cursor-pointer transition-colors duration-150 min-h-[56px]
                   ${isActive ? 'ring-2 ring-indigo-500' : ''}`}
               >
-                <div className="mr-3 text-indigo-600">
+                <div className="mr-3 text-indigo-600 dark:text-indigo-400">
                   <Icon name={list.icon} size={24} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-800 flex items-center">
+                  <div className="font-medium text-slate-800 dark:text-slate-100 flex items-center">
                     <span className="truncate">{list.name}</span>
                     {isShared && (
-                      <span className="ml-2 text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-200 flex-shrink-0">已分享</span>
+                      <span className="ml-2 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
                     )}
                   </div>
                   <div className="text-sm text-slate-400">{checkedCount}/{itemCount} 已確認</div>
@@ -216,7 +216,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                   <button
                     onClick={(e) => handleShareClick(list, e)}
                     className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
-                      ${isShared ? 'text-emerald-500 active:bg-emerald-50' : 'text-slate-400 active:bg-slate-100'}`}
+                      ${isShared ? 'text-emerald-500 active:bg-emerald-50 dark:active:bg-emerald-900/30' : 'text-slate-400 active:bg-slate-100 dark:active:bg-slate-700'}`}
                     aria-label="分享清單"
                   >
                     <Share2 size={18} />
@@ -239,7 +239,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         {/* Shared with me section */}
         {sharedWithMeEntries.length > 0 && (
           <div className="mt-6">
-            <div className="text-sm text-slate-500 mb-2 px-1">與我分享的清單</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400 mb-2 px-1">與我分享的清單</div>
             <div className="space-y-2">
               {sharedWithMeEntries.map(([sharedListId, sharedList]) => {
                 const itemCount = (sharedList.items || []).length;
@@ -249,16 +249,16 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                   <div
                     key={sharedListId}
                     onClick={() => selectSharedWithMe(sharedListId)}
-                    className="flex items-center p-4 bg-indigo-50 rounded-xl border border-indigo-200 active:bg-indigo-100 cursor-pointer transition-colors duration-150 min-h-[56px]"
+                    className="flex items-center p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl border border-indigo-200 dark:border-indigo-800 active:bg-indigo-100 dark:active:bg-indigo-900/50 cursor-pointer transition-colors duration-150 min-h-[56px]"
                   >
-                    <div className="mr-3 text-indigo-600">
+                    <div className="mr-3 text-indigo-600 dark:text-indigo-400">
                       <Icon name={sharedList.icon || 'clipboard-list'} size={24} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-slate-800">{sharedList.name}</div>
+                      <div className="font-medium text-slate-800 dark:text-slate-100">{sharedList.name}</div>
                       <div className="text-sm text-slate-400">
                         {checkedCount}/{itemCount} 已確認
-                        <span className="ml-2 text-indigo-500">
+                        <span className="ml-2 text-indigo-500 dark:text-indigo-400">
                           來自 {sharedList.ownerName || sharedList.ownerEmail}
                         </span>
                       </div>
@@ -271,15 +271,15 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         )}
 
         {/* Add new list */}
-        <div className="mt-4 p-4 bg-white rounded-xl border border-slate-200">
-          <div className="text-sm text-slate-500 mb-3">新增清單</div>
+        <div className="mt-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+          <div className="text-sm text-slate-500 dark:text-slate-400 mb-3">新增清單</div>
           <div className="flex gap-1 mb-3 flex-wrap">
             {iconOptions.map(iconName => (
               <button
                 key={iconName}
                 onClick={() => setNewListIcon(iconName)}
-                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-150 active:bg-indigo-100
-                  ${newListIcon === iconName ? 'bg-indigo-100 text-indigo-600' : 'text-slate-500'}`}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-150 active:bg-indigo-100 dark:active:bg-indigo-900/50
+                  ${newListIcon === iconName ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
                 aria-label={iconName}
               >
                 <Icon name={iconName} size={20} />
@@ -292,11 +292,11 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
               value={newListName}
               onChange={(e) => setNewListName(e.target.value)}
               placeholder="清單名稱..."
-              className="flex-1 px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+              className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             />
             <button
               onClick={addNewList}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium active:bg-indigo-700 transition-colors duration-150 min-h-[44px]"
+              className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
             >
               建立
             </button>
