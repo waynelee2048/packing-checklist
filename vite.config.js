@@ -50,7 +50,7 @@ export default defineConfig({
   server: {
     allowedHosts: ['.trycloudflare.com']
   },
-  base: '/packing-checklist/',
+  base: '/',
   build: {
     outDir: 'docs',
     emptyDirFirst: true
