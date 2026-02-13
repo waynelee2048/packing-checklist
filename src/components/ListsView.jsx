@@ -214,6 +214,16 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     }
   };
 
+  const handleSetPermission = async (email, permission) => {
+    if (sharePanelSharedId && shared) {
+      try {
+        await shared.setUserPermission(sharePanelSharedId, email, permission);
+      } catch (err) {
+        console.error('設定權限失敗', err);
+      }
+    }
+  };
+
   const handleUnshare = async () => {
     if (!sharePanelSharedId || !shared) return;
 
@@ -492,6 +502,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
           sharedData={sharePanelSharedId ? (shared?.sharedByMe?.[sharePanelSharedId] || null) : null}
           onAddUser={handleAddUser}
           onRemoveUser={handleRemoveUser}
+          onSetPermission={handleSetPermission}
           onUnshare={handleUnshare}
           onClose={() => { setSharePanelListId(null); setSharePanelSharedId(null); }}
         />

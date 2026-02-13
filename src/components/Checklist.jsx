@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Icon from './Icon';
-import { categories } from '../utils/data';
+import { categories, encodeEmail } from '../utils/data';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
@@ -129,6 +129,7 @@ export default function Checklist({
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddName, setQuickAddName] = useState('');
   const [quickAddCategory, setQuickAddCategory] = useState(categories[0]);
+  const [confirmRemoveItem, setConfirmRemoveItem] = useState(null);
 
   // Determine mode: 'shared-with-me', 'own-shared', or 'local'
   const isSharedWithMe = activeSharedListId && shared?.sharedWithMe?.[activeSharedListId];
@@ -142,6 +143,14 @@ export default function Checklist({
     : isOwnShared
       ? shared.sharedByMe[activeSharedListId]
       : null;
+
+  // Check if shared-with-me user has edit permission
+  const canEdit = mode !== 'shared-with-me' || (() => {
+    if (!user?.email || !sharedData?.sharedWith) return false;
+    const encoded = encodeEmail(user.email);
+    const perm = sharedData.sharedWith[encoded];
+    return perm === 'edit';
+  })();
 
   // Local list (for 'local' and 'own-shared' modes)
   const list = data.lists?.find(l => l.id === data.activeListId);
@@ -346,18 +355,26 @@ export default function Checklist({
 
   const handleQuickAdd = () => {
     const trimmed = quickAddName.trim();
-    if (!trimmed || !safeList) return;
-    const newId = 'item_' + Date.now();
-    const newItem = { id: newId, name: trimmed, category: quickAddCategory };
-    const newData = {
-      ...data,
-      itemLibrary: [...(data.itemLibrary || []), newItem],
-      lists: data.lists.map(l => {
-        if (l.id !== data.activeListId) return l;
-        return { ...l, items: [...(Array.isArray(l.items) ? l.items : []), newId] };
-      })
-    };
-    onSaveData(newData);
+    if (!trimmed) return;
+
+    if (mode === 'shared-with-me') {
+      const newId = 'shared_item_' + Date.now();
+      const newItem = { id: newId, name: trimmed, category: quickAddCategory };
+      shared.addSharedItem(activeSharedListId, newItem);
+    } else {
+      if (!safeList) return;
+      const newId = 'item_' + Date.now();
+      const newItem = { id: newId, name: trimmed, category: quickAddCategory };
+      const newData = {
+        ...data,
+        itemLibrary: [...(data.itemLibrary || []), newItem],
+        lists: data.lists.map(l => {
+          if (l.id !== data.activeListId) return l;
+          return { ...l, items: [...(Array.isArray(l.items) ? l.items : []), newId] };
+        })
+      };
+      onSaveData(newData);
+    }
     setQuickAddName('');
     setShowQuickAdd(false);
   };
@@ -414,6 +431,18 @@ export default function Checklist({
               aria-label="展開詳情"
             >
               <ChevronDown size={18} className={`transition-transform duration-200 ${isNoteExpanded ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+          {mode === 'shared-with-me' && canEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setConfirmRemoveItem(item.id);
+              }}
+              className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+              aria-label="移除物品"
+            >
+              <Trash2 size={16} />
             </button>
           )}
         </div>
@@ -609,8 +638,20 @@ export default function Checklist({
       {/* Celebration overlay */}
       {showCelebration && <CelebrationOverlay />}
 
-      {/* Quick add FAB — hidden in shared-with-me mode */}
-      {mode !== 'shared-with-me' && (
+      {/* Confirm remove item dialog */}
+      {confirmRemoveItem !== null && (
+        <ConfirmDialog
+          message="確定要移除此物品？"
+          onConfirm={() => {
+            shared.removeSharedItem(activeSharedListId, confirmRemoveItem);
+            setConfirmRemoveItem(null);
+          }}
+          onCancel={() => setConfirmRemoveItem(null)}
+        />
+      )}
+
+      {/* Quick add FAB — shown when canEdit */}
+      {canEdit && (
         <>
           {showQuickAdd && (
             <div

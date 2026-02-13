@@ -148,20 +148,27 @@ export function useSharedLists(user, data) {
       const sharedData = sharedByMe[list.sharedListId];
       if (!sharedData) return;
 
-      // Build embedded items from current itemLibrary
+      // Build embedded items from current itemLibrary (owner's items)
       const embeddedItems = (Array.isArray(list.items) ? list.items : [])
         .map(id => data.itemLibrary.find(item => item.id === id))
         .filter(Boolean)
         .map(({ id, name, category, note, photoURL }) => ({ id, name, category, note, ...(photoURL && { photoURL }) }));
 
+      // Preserve receiver-added items (IDs not in owner's list.items)
+      const ownerItemIds = new Set(Array.isArray(list.items) ? list.items : []);
+      const sharedUserItems = (sharedData.items || []).filter(
+        item => !ownerItemIds.has(item.id)
+      );
+      const mergedItems = [...embeddedItems, ...sharedUserItems];
+
       // Compare with current shared items
       const currentItems = sharedData.items || [];
-      const changed = JSON.stringify(embeddedItems) !== JSON.stringify(currentItems);
+      const changed = JSON.stringify(mergedItems) !== JSON.stringify(currentItems);
 
       if (changed) {
         const listRef = ref(db, `sharedLists/${list.sharedListId}`);
         update(listRef, {
-          items: embeddedItems,
+          items: mergedItems,
           name: list.name,
           icon: list.icon
         });
@@ -182,7 +189,7 @@ export function useSharedLists(user, data) {
     // Build sharedWith map
     const sharedWith = {};
     emails.forEach(email => {
-      sharedWith[encodeEmail(email)] = true;
+      sharedWith[encodeEmail(email)] = 'view';
     });
 
     // Create shared list
@@ -215,7 +222,7 @@ export function useSharedLists(user, data) {
   const addSharedUser = useCallback(async (sharedListId, email) => {
     const encoded = encodeEmail(email);
     const updates = {};
-    updates[`sharedLists/${sharedListId}/sharedWith/${encoded}`] = true;
+    updates[`sharedLists/${sharedListId}/sharedWith/${encoded}`] = 'view';
     updates[`sharedIndex/${encoded}/${sharedListId}`] = true;
     await update(ref(db), updates);
   }, []);
@@ -245,6 +252,33 @@ export function useSharedLists(user, data) {
 
     await update(ref(db), updates);
   }, [sharedByMe]);
+
+  // Set permission for a shared user
+  const setUserPermission = useCallback(async (sharedListId, email, permission) => {
+    const encoded = encodeEmail(email);
+    await set(ref(db, `sharedLists/${sharedListId}/sharedWith/${encoded}`), permission);
+  }, []);
+
+  // Add item to shared list (for receivers with edit permission)
+  const addSharedItem = useCallback(async (sharedListId, item) => {
+    const sharedData = sharedWithMe[sharedListId];
+    if (!sharedData) return;
+    const currentItems = sharedData.items || [];
+    const newItems = [...currentItems, item];
+    await set(ref(db, `sharedLists/${sharedListId}/items`), newItems);
+  }, [sharedWithMe]);
+
+  // Remove item from shared list
+  const removeSharedItem = useCallback(async (sharedListId, itemId) => {
+    const sharedData = sharedWithMe[sharedListId] || sharedByMe[sharedListId];
+    if (!sharedData) return;
+    const newItems = (sharedData.items || []).filter(i => i.id !== itemId);
+    const newChecked = (sharedData.checkedItems || []).filter(id => id !== itemId);
+    const updates = {};
+    updates[`sharedLists/${sharedListId}/items`] = newItems;
+    updates[`sharedLists/${sharedListId}/checkedItems`] = newChecked;
+    await update(ref(db), updates);
+  }, [sharedWithMe, sharedByMe]);
 
   // Toggle check on shared list
   const toggleSharedCheck = useCallback(async (sharedListId, itemId) => {
@@ -281,6 +315,9 @@ export function useSharedLists(user, data) {
     addSharedUser,
     removeSharedUser,
     unshareList,
+    setUserPermission,
+    addSharedItem,
+    removeSharedItem,
     toggleSharedCheck,
     resetSharedChecks,
     checkAllShared

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
-import { decodeEmail } from '../utils/data';
+import { X, Pencil, Eye } from 'lucide-react';
+import { decodeEmail, encodeEmail } from '../utils/data';
 
-export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnshare, onClose }) {
+export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onSetPermission, onUnshare, onClose }) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
@@ -68,18 +68,31 @@ export default function SharePanel({ sharedData, onAddUser, onRemoveUser, onUnsh
             <div className="mt-4">
               <div className="text-sm text-slate-500 dark:text-slate-400 mb-2">已分享給</div>
               <div className="space-y-2">
-                {sharedEmails.map(e => (
-                  <div key={e} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
-                    <span className="text-slate-700 dark:text-slate-200 text-sm truncate flex-1">{e}</span>
-                    <button
-                      onClick={() => onRemoveUser(e)}
-                      className="ml-2 p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors duration-150"
-                      aria-label="移除分享對象"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
+                {sharedEmails.map(e => {
+                  const encoded = encodeEmail(e);
+                  const perm = sharedData?.sharedWith?.[encoded] || 'view';
+                  return (
+                    <div key={e} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
+                      <span className="text-slate-700 dark:text-slate-200 text-sm truncate flex-1">{e}</span>
+                      <button
+                        onClick={() => onSetPermission(e, perm === 'edit' ? 'view' : 'edit')}
+                        className={`ml-2 p-2 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors duration-150
+                          ${perm === 'edit' ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30' : 'text-slate-400'}`}
+                        aria-label={perm === 'edit' ? '切換為檢視' : '切換為編輯'}
+                        title={perm === 'edit' ? '可編輯' : '僅檢視'}
+                      >
+                        {perm === 'edit' ? <Pencil size={16} /> : <Eye size={16} />}
+                      </button>
+                      <button
+                        onClick={() => onRemoveUser(e)}
+                        className="ml-1 p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[36px] min-h-[36px] flex items-center justify-center transition-colors duration-150"
+                        aria-label="移除分享對象"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

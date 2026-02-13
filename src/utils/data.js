@@ -49,7 +49,11 @@ export function sanitizeSharedList(sharedList) {
     ...sharedList,
     items: Array.isArray(sharedList.items) ? sharedList.items : [],
     checkedItems: Array.isArray(sharedList.checkedItems) ? sharedList.checkedItems : [],
-    sharedWith: sharedList.sharedWith || {}
+    sharedWith: Object.fromEntries(
+      Object.entries(sharedList.sharedWith || {}).map(
+        ([k, v]) => [k, v === true ? 'view' : v]
+      )
+    )
   };
 }
 
