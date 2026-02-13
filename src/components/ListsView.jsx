@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Trash2, Share2, X } from 'lucide-react';
+import { Trash2, Share2, X, Plus, Search, ArrowUpDown, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { iconOptions } from '../utils/data';
 import Icon from './Icon';
 import SharePanel from './SharePanel';
@@ -34,12 +37,66 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
+function SortableListItem({ list, isActive }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: list.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative',
+  };
+
+  const itemCount = (list.items || []).length;
+  const checkedCount = (list.checkedItems || []).length;
+  const isShared = !!list.sharedListId;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        className={`flex items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 min-h-[56px]
+          ${isDragging ? 'shadow-lg opacity-90' : ''} ${isActive ? 'ring-2 ring-indigo-500' : ''}`}
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="w-6 h-6 mr-3 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-500 touch-none cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical size={20} />
+        </div>
+        <div className="mr-3 text-indigo-600 dark:text-indigo-400">
+          <Icon name={list.icon} size={24} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-slate-800 dark:text-slate-100 flex items-center">
+            <span className="truncate">{list.name}</span>
+            {isShared && (
+              <span className="ml-2 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
+            )}
+          </div>
+          <div className="text-sm text-slate-400">{checkedCount}/{itemCount} 已確認</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ListsView({ data, user, onNavigate, onSaveData, shared }) {
   const [newListName, setNewListName] = useState('');
   const [newListIcon, setNewListIcon] = useState('clipboard-list');
   const [sharePanelListId, setSharePanelListId] = useState(null);
   const [sharePanelSharedId, setSharePanelSharedId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortMode, setSortMode] = useState('default'); // 'default' | 'name' | 'progress' | 'manual'
 
   const selectList = (listId, sharedListId) => {
     const newData = {
@@ -74,6 +131,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     onSaveData(newData);
     setNewListName('');
     setNewListIcon('clipboard-list');
+    setShowAddForm(false);
     onNavigate('checklist', { sharedListId: null });
   };
 
@@ -175,66 +233,167 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     }
   };
 
-  const sharedWithMeEntries = shared ? Object.entries(shared.sharedWithMe) : [];
+  const cycleSortMode = () => {
+    setSortMode(prev => {
+      if (prev === 'default') return 'name';
+      if (prev === 'name') return 'progress';
+      if (prev === 'progress') return 'manual';
+      return 'default';
+    });
+  };
+  const sortModeLabel = sortMode === 'name' ? '名稱' : sortMode === 'progress' ? '完成度' : sortMode === 'manual' ? '手動' : '';
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const lists = data.lists || [];
+    const oldIndex = lists.findIndex(l => l.id === active.id);
+    const newIndex = lists.findIndex(l => l.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newLists = arrayMove(lists, oldIndex, newIndex);
+    onSaveData({ ...data, lists: newLists });
+  };
+
+  // Filter lists by search
+  const q = searchQuery.toLowerCase();
+  const filteredLists = (data.lists || []).filter(list =>
+    !q || list.name.toLowerCase().includes(q)
+  );
+
+  // Sort filtered lists
+  const sortedLists = (() => {
+    if (sortMode === 'name') {
+      return [...filteredLists].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    }
+    if (sortMode === 'progress') {
+      const getProgress = (list) => {
+        const total = (list.items || []).length;
+        if (total === 0) return 0;
+        return (list.checkedItems || []).length / total;
+      };
+      return [...filteredLists].sort((a, b) => getProgress(a) - getProgress(b));
+    }
+    return filteredLists;
+  })();
+
+  const sharedWithMeEntries = (shared ? Object.entries(shared.sharedWithMe) : []).filter(
+    ([, sharedList]) => !q || (sharedList.name || '').toLowerCase().includes(q)
+  );
 
   return (
     <div className="flex flex-col h-screen pb-16">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
-        <div className="text-lg font-bold text-center">我的清單</div>
+        <div className="flex items-center justify-between">
+          <div className="w-10" />
+          <div className="text-lg font-bold text-center">我的清單</div>
+          <div className="flex flex-col items-center w-10">
+            <button
+              onClick={cycleSortMode}
+              className={`p-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center
+                ${sortMode !== 'default' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}
+              aria-label="排序方式"
+            >
+              <ArrowUpDown size={20} />
+            </button>
+            {sortModeLabel && (
+              <span className="text-[10px] text-indigo-600 dark:text-indigo-400 -mt-1 font-medium">{sortModeLabel}</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Lists */}
       <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
-        <div className="space-y-2">
-          {(data.lists || []).map(list => {
-            const itemCount = (list.items || []).length;
-            const checkedCount = (list.checkedItems || []).length;
-            const isActive = list.id === data.activeListId;
-            const isShared = !!list.sharedListId;
-
-            return (
-              <div
-                key={list.id}
-                onClick={() => selectList(list.id, list.sharedListId)}
-                className={`flex items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 active:bg-slate-50 dark:active:bg-slate-700 cursor-pointer transition-colors duration-150 min-h-[56px]
-                  ${isActive ? 'ring-2 ring-indigo-500' : ''}`}
+        {/* Search bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜尋清單..."
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 p-1 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                aria-label="清除搜尋"
               >
-                <div className="mr-3 text-indigo-600 dark:text-indigo-400">
-                  <Icon name={list.icon} size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-800 dark:text-slate-100 flex items-center">
-                    <span className="truncate">{list.name}</span>
-                    {isShared && (
-                      <span className="ml-2 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-slate-400">{checkedCount}/{itemCount} 已確認</div>
-                </div>
-                {user && (
-                  <button
-                    onClick={(e) => handleShareClick(list, e)}
-                    className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
-                      ${isShared ? 'text-emerald-500 active:bg-emerald-50 dark:active:bg-emerald-900/30' : 'text-slate-400 active:bg-slate-100 dark:active:bg-slate-700'}`}
-                    aria-label="分享清單"
-                  >
-                    <Share2 size={18} />
-                  </button>
-                )}
-                {data.lists.length > 1 && (
-                  <button
-                    onClick={(e) => handleDeleteClick(list.id, e)}
-                    className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
-                    aria-label="刪除清單"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+                <X size={16} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {sortMode === 'manual' ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={(data.lists || []).map(l => l.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-2">
+                {(data.lists || []).map(list => (
+                  <SortableListItem key={list.id} list={list} isActive={list.id === data.activeListId} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <div className="space-y-2">
+            {sortedLists.map(list => {
+              const itemCount = (list.items || []).length;
+              const checkedCount = (list.checkedItems || []).length;
+              const isActive = list.id === data.activeListId;
+              const isShared = !!list.sharedListId;
+
+              return (
+                <div
+                  key={list.id}
+                  onClick={() => selectList(list.id, list.sharedListId)}
+                  className={`flex items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 active:bg-slate-50 dark:active:bg-slate-700 cursor-pointer transition-colors duration-150 min-h-[56px]
+                    ${isActive ? 'ring-2 ring-indigo-500' : ''}`}
+                >
+                  <div className="mr-3 text-indigo-600 dark:text-indigo-400">
+                    <Icon name={list.icon} size={24} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-800 dark:text-slate-100 flex items-center">
+                      <span className="truncate">{list.name}</span>
+                      {isShared && (
+                        <span className="ml-2 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-slate-400">{checkedCount}/{itemCount} 已確認</div>
+                  </div>
+                  {user && (
+                    <button
+                      onClick={(e) => handleShareClick(list, e)}
+                      className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
+                        ${isShared ? 'text-emerald-500 active:bg-emerald-50 dark:active:bg-emerald-900/30' : 'text-slate-400 active:bg-slate-100 dark:active:bg-slate-700'}`}
+                      aria-label="分享清單"
+                    >
+                      <Share2 size={18} />
+                    </button>
+                  )}
+                  {data.lists.length > 1 && (
+                    <button
+                      onClick={(e) => handleDeleteClick(list.id, e)}
+                      className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+                      aria-label="刪除清單"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {/* Shared with me section */}
         {sharedWithMeEntries.length > 0 && (
@@ -271,36 +430,59 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         )}
 
         {/* Add new list */}
-        <div className="mt-4 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-          <div className="text-sm text-slate-500 dark:text-slate-400 mb-3">新增清單</div>
-          <div className="flex gap-1 mb-3 flex-wrap">
-            {iconOptions.map(iconName => (
-              <button
-                key={iconName}
-                onClick={() => setNewListIcon(iconName)}
-                className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-150 active:bg-indigo-100 dark:active:bg-indigo-900/50
-                  ${newListIcon === iconName ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
-                aria-label={iconName}
-              >
-                <Icon name={iconName} size={20} />
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={newListName}
-              onChange={(e) => setNewListName(e.target.value)}
-              placeholder="清單名稱..."
-              className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-            />
+        <div className="mt-4">
+          {showAddForm ? (
+            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-slate-500 dark:text-slate-400">新增清單</div>
+                <button
+                  onClick={() => { setShowAddForm(false); setNewListName(''); setNewListIcon('clipboard-list'); }}
+                  className="p-1 text-slate-400 active:text-slate-600 transition-colors duration-150"
+                  aria-label="收起"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex gap-1 mb-3 flex-wrap">
+                {iconOptions.map(iconName => (
+                  <button
+                    key={iconName}
+                    onClick={() => setNewListIcon(iconName)}
+                    className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-150 active:bg-indigo-100 dark:active:bg-indigo-900/50
+                      ${newListIcon === iconName ? 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'}`}
+                    aria-label={iconName}
+                  >
+                    <Icon name={iconName} size={20} />
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newListName}
+                  onChange={(e) => setNewListName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') addNewList(); }}
+                  placeholder="清單名稱..."
+                  autoFocus
+                  className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+                />
+                <button
+                  onClick={addNewList}
+                  className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
+                >
+                  建立
+                </button>
+              </div>
+            </div>
+          ) : (
             <button
-              onClick={addNewList}
-              className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 font-medium active:bg-slate-50 dark:active:bg-slate-800 transition-colors duration-150 flex items-center justify-center gap-2"
             >
-              建立
+              <Plus size={18} />
+              新增清單
             </button>
-          </div>
+          )}
         </div>
       </div>
 

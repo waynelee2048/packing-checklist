@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, RotateCcw, CheckCheck } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Icon from './Icon';
 import { categories } from '../utils/data';
 
@@ -66,6 +69,46 @@ function CelebrationOverlay() {
   );
 }
 
+function SortableItem({ item }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    position: 'relative',
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div
+        className={`flex items-center p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 min-h-[56px]
+          ${isDragging ? 'shadow-lg opacity-90' : ''}`}
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="w-6 h-6 mr-4 flex items-center justify-center flex-shrink-0 text-slate-400 dark:text-slate-500 touch-none cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-lg text-slate-800 dark:text-slate-100">
+            {item.name}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Checklist({
   data,
   user,
@@ -82,6 +125,10 @@ export default function Checklist({
   const [lastToggledId, setLastToggledId] = useState(null);
   const [collapsedCategories, setCollapsedCategories] = useState([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [sortMode, setSortMode] = useState('default'); // 'default' | 'name' | 'unchecked' | 'manual'
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddName, setQuickAddName] = useState('');
+  const [quickAddCategory, setQuickAddCategory] = useState(categories[0]);
 
   // Determine mode: 'shared-with-me', 'own-shared', or 'local'
   const isSharedWithMe = activeSharedListId && shared?.sharedWithMe?.[activeSharedListId];
@@ -179,6 +226,55 @@ export default function Checklist({
     return groups;
   })();
 
+  // Sorted flat list for non-default modes
+  const sortedItems = (() => {
+    if (sortMode === 'name') {
+      return [...items].sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    }
+    if (sortMode === 'unchecked') {
+      return [...items].sort((a, b) => {
+        const aChecked = checkedItems.includes(a.id) ? 1 : 0;
+        const bChecked = checkedItems.includes(b.id) ? 1 : 0;
+        return aChecked - bChecked;
+      });
+    }
+    return items;
+  })();
+
+  const cycleSortMode = () => {
+    setSortMode(prev => {
+      if (prev === 'default') return 'name';
+      if (prev === 'name') return 'unchecked';
+      if (prev === 'unchecked') return mode === 'shared-with-me' ? 'default' : 'manual';
+      return 'default'; // manual → default
+    });
+  };
+
+  const sortModeLabel = sortMode === 'name' ? '名稱' : sortMode === 'unchecked' ? '未勾選' : sortMode === 'manual' ? '手動' : '';
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
+  );
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = safeList.items.indexOf(active.id);
+    const newIndex = safeList.items.indexOf(over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const newItems = arrayMove(safeList.items, oldIndex, newIndex);
+    const newData = {
+      ...data,
+      lists: data.lists.map(l =>
+        l.id === data.activeListId ? { ...l, items: newItems } : l
+      )
+    };
+    onSaveData(newData);
+  };
+
   const toggleItemCheck = (itemId) => {
     setLastToggledId(itemId);
     if (mode === 'shared-with-me' || mode === 'own-shared') {
@@ -246,6 +342,24 @@ export default function Checklist({
         ? prev.filter(c => c !== category)
         : [...prev, category]
     );
+  };
+
+  const handleQuickAdd = () => {
+    const trimmed = quickAddName.trim();
+    if (!trimmed || !safeList) return;
+    const newId = 'item_' + Date.now();
+    const newItem = { id: newId, name: trimmed, category: quickAddCategory };
+    const newData = {
+      ...data,
+      itemLibrary: [...(data.itemLibrary || []), newItem],
+      lists: data.lists.map(l => {
+        if (l.id !== data.activeListId) return l;
+        return { ...l, items: [...(Array.isArray(l.items) ? l.items : []), newId] };
+      })
+    };
+    onSaveData(newData);
+    setQuickAddName('');
+    setShowQuickAdd(false);
   };
 
   const renderItem = (item) => {
@@ -343,15 +457,32 @@ export default function Checklist({
               <span className="text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
             )}
           </div>
-          {mode !== 'shared-with-me' && (
-            <button
-              onClick={() => onNavigate('addItems')}
-              className="p-2 -mr-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
-              aria-label="新增物品"
-            >
-              <Plus size={22} className="text-indigo-600 dark:text-indigo-400" />
-            </button>
-          )}
+          <div className="flex items-center flex-shrink-0">
+            {items.length > 0 && (
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={cycleSortMode}
+                  className={`p-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center
+                    ${sortMode !== 'default' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-500'}`}
+                  aria-label="排序方式"
+                >
+                  <ArrowUpDown size={20} />
+                </button>
+                {sortModeLabel && (
+                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 -mt-1 font-medium">{sortModeLabel}</span>
+                )}
+              </div>
+            )}
+            {mode !== 'shared-with-me' && (
+              <button
+                onClick={() => onNavigate('addItems')}
+                className="p-2 -mr-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label="新增物品"
+              >
+                <Plus size={22} className="text-indigo-600 dark:text-indigo-400" />
+              </button>
+            )}
+          </div>
         </div>
         {/* Progress bar */}
         {totalCount > 0 && (
@@ -387,37 +518,53 @@ export default function Checklist({
           </div>
         ) : (
           <div className="space-y-4">
-            {groupedByCategory.map(({ category, items: catItems }) => {
-              const isCollapsed = collapsedCategories.includes(category);
-              const catCheckedCount = catItems.filter(item => checkedItems.includes(item.id)).length;
-              const catTotalCount = catItems.length;
-              const catAllChecked = catCheckedCount === catTotalCount;
+            {sortMode === 'manual' ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-2">
+                    {items.map(item => (
+                      <SortableItem key={item.id} item={item} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : sortMode === 'default' ? (
+              groupedByCategory.map(({ category, items: catItems }) => {
+                const isCollapsed = collapsedCategories.includes(category);
+                const catCheckedCount = catItems.filter(item => checkedItems.includes(item.id)).length;
+                const catTotalCount = catItems.length;
+                const catAllChecked = catCheckedCount === catTotalCount;
 
-              return (
-                <div key={category}>
-                  {/* Category header */}
-                  <button
-                    onClick={() => toggleCategoryCollapse(category)}
-                    className="w-full flex items-center gap-2 py-2 px-1 mb-1"
-                  >
-                    <ChevronDown
-                      size={16}
-                      className={`text-slate-400 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
-                    />
-                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{category}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${catAllChecked ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
-                      {catCheckedCount}/{catTotalCount}
-                    </span>
-                  </button>
-                  {/* Category items */}
-                  {!isCollapsed && (
-                    <div className="space-y-2 animate-slide-down">
-                      {catItems.map(item => renderItem(item))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                return (
+                  <div key={category}>
+                    {/* Category header */}
+                    <button
+                      onClick={() => toggleCategoryCollapse(category)}
+                      className="w-full flex items-center gap-2 py-2 px-1 mb-1"
+                    >
+                      <ChevronDown
+                        size={16}
+                        className={`text-slate-400 transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`}
+                      />
+                      <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">{category}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${catAllChecked ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                        {catCheckedCount}/{catTotalCount}
+                      </span>
+                    </button>
+                    {/* Category items */}
+                    {!isCollapsed && (
+                      <div className="space-y-2 animate-slide-down">
+                        {catItems.map(item => renderItem(item))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="space-y-2">
+                {sortedItems.map(item => renderItem(item))}
+              </div>
+            )}
           </div>
         )}
 
@@ -461,6 +608,55 @@ export default function Checklist({
 
       {/* Celebration overlay */}
       {showCelebration && <CelebrationOverlay />}
+
+      {/* Quick add FAB — hidden in shared-with-me mode */}
+      {mode !== 'shared-with-me' && (
+        <>
+          {showQuickAdd && (
+            <div
+              className="fixed inset-0 bg-black/30 z-40"
+              onClick={() => { setShowQuickAdd(false); setQuickAddName(''); }}
+            />
+          )}
+          {showQuickAdd && (
+            <div className="fixed right-4 bottom-24 z-50 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">快速新增物品</div>
+              <input
+                type="text"
+                placeholder="物品名稱"
+                value={quickAddName}
+                onChange={e => setQuickAddName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); }}
+                autoFocus
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <select
+                value={quickAddCategory}
+                onChange={e => setQuickAddCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleQuickAdd}
+                disabled={!quickAddName.trim()}
+                className="w-full py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150"
+              >
+                新增並加入清單
+              </button>
+            </div>
+          )}
+          <button
+            onClick={() => { setShowQuickAdd(v => !v); if (showQuickAdd) setQuickAddName(''); }}
+            className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg flex items-center justify-center active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150"
+            aria-label={showQuickAdd ? '關閉新增表單' : '快速新增物品'}
+          >
+            {showQuickAdd ? <X size={24} /> : <Plus size={24} />}
+          </button>
+        </>
+      )}
     </div>
   );
 }

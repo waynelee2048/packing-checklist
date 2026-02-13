@@ -18,7 +18,7 @@ export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNav
   ];
 
   return (
-    <div className="flex flex-col h-full pb-20">
+    <div className="flex flex-col h-screen pb-16">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3 safe-top">
         <div className="text-lg font-bold text-slate-900 dark:text-slate-50 text-center">設定</div>
