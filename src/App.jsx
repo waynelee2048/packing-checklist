@@ -4,7 +4,6 @@ import { useFirebase } from './hooks/useFirebase';
 import { useSharedLists } from './hooks/useSharedLists';
 import { useAdmin } from './hooks/useAdmin';
 import { useCategories } from './hooks/useCategories';
-import { usePWA } from './hooks/usePWA';
 import { useTheme } from './hooks/useTheme';
 import { loadFromLocal } from './utils/data';
 import Checklist from './components/Checklist';
@@ -14,7 +13,7 @@ import AddItemsView from './components/AddItemsView';
 import ProfileView from './components/ProfileView';
 import AdminView from './components/admin/AdminView';
 import BottomTabBar from './components/BottomTabBar';
-import UpdatePrompt from './components/UpdatePrompt';
+
 
 function App() {
   const [currentView, setCurrentView] = useState('lists');
@@ -24,7 +23,6 @@ function App() {
   const shared = useSharedLists(user, data);
   const admin = useAdmin(user);
   const { categories, addCategory, updateCategory, removeCategory } = useCategories();
-  const { needRefresh, refresh, dismiss, checkForUpdate, checking: checkingUpdate } = usePWA();
   const { preference: themePreference, changeTheme: onThemeChange } = useTheme();
 
   const navigate = (view, params) => {
@@ -91,8 +89,6 @@ function App() {
           isAdmin={admin.isAdmin}
           themePreference={themePreference}
           onThemeChange={onThemeChange}
-          onCheckUpdate={checkForUpdate}
-          checkingUpdate={checkingUpdate}
         />
       )}
       {currentView === 'admin' && admin.isAdmin && (
@@ -118,9 +114,6 @@ function App() {
           currentView={currentView === 'checklist' ? 'lists' : currentView}
           onNavigate={(view) => navigate(view, { sharedListId: null })}
         />
-      )}
-      {needRefresh && (
-        <UpdatePrompt onRefresh={refresh} onDismiss={dismiss} />
       )}
       {import.meta.env.DEV && <Agentation />}
     </>
