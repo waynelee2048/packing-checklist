@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
 import { ref, set, onValue } from 'firebase/database';
 import { auth, db, provider } from '../utils/firebase';
 import { sanitizeData, loadFromLocal, saveToLocal } from '../utils/data';
@@ -58,23 +58,18 @@ export function useFirebase(initialData) {
     }
   }, [user, saveDataToFirebase]);
 
-  // Handle login
+  // Handle login — 手機用 redirect（popup 在手機觸控會失效），桌面用 popup
   const handleLogin = useCallback(() => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone === true;
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-    signInWithPopup(auth, provider)
-      .catch(err => {
-        console.error('登入失敗', err);
-        if (isStandalone) {
-          // PWA standalone 模式下 popup 可能無法正常運作
-          // 引導使用者在瀏覽器中開啟
-          const url = window.location.origin + window.location.pathname;
-          if (confirm('PWA 模式下登入可能受限，是否在瀏覽器中開啟登入？')) {
-            window.open(url, '_blank');
-          }
-        }
-      });
+    if (isMobile) {
+      signInWithRedirect(auth, provider);
+    } else {
+      signInWithPopup(auth, provider)
+        .catch(err => {
+          console.error('登入失敗', err);
+        });
+    }
   }, []);
 
   // Handle logout
@@ -91,6 +86,11 @@ export function useFirebase(initialData) {
       .catch(err => {
         console.error('登出失敗', err);
       });
+  }, []);
+
+  // 處理 redirect 登入結果（手機登入回來時）
+  useEffect(() => {
+    getRedirectResult(auth).catch(() => {});
   }, []);
 
   // Listen to auth state changes
