@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { ref, set, onValue } from 'firebase/database';
 import { auth, db, provider } from '../utils/firebase';
 import { sanitizeData, loadFromLocal, saveToLocal } from '../utils/data';
@@ -58,18 +58,12 @@ export function useFirebase(initialData) {
     }
   }, [user, saveDataToFirebase]);
 
-  // Handle login — 手機用 redirect（popup 在手機觸控會失效），桌面用 popup
+  // Handle login
   const handleLogin = useCallback(() => {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-    if (isMobile) {
-      signInWithRedirect(auth, provider);
-    } else {
-      signInWithPopup(auth, provider)
-        .catch(err => {
-          console.error('登入失敗', err);
-        });
-    }
+    signInWithPopup(auth, provider)
+      .catch(err => {
+        console.error('登入失敗', err);
+      });
   }, []);
 
   // Handle logout
@@ -86,11 +80,6 @@ export function useFirebase(initialData) {
       .catch(err => {
         console.error('登出失敗', err);
       });
-  }, []);
-
-  // 處理 redirect 登入結果（手機登入回來時）
-  useEffect(() => {
-    getRedirectResult(auth).catch(() => {});
   }, []);
 
   // Listen to auth state changes

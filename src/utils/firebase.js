@@ -5,7 +5,7 @@ import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
   apiKey: "AIzaSyC3tTgAIVm0qz5irkqb7AkjwY7FOMJz4RM",
-  authDomain: "packing-8b3de.firebaseapp.com",
+  authDomain: "packing.kkleekk.com",
   databaseURL: "https://packing-8b3de-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "packing-8b3de",
   storageBucket: "packing-8b3de.firebasestorage.app",
