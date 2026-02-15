@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Search, X, StickyNote, Camera, Loader2, Plus } from 'lucide-react';
+import { Search, X, StickyNote, Camera, Loader2, Plus, Tag, Edit3, Trash2, Check } from 'lucide-react';
 import { useItemPhoto } from '../hooks/useItemPhoto';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -32,7 +32,7 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
-export default function LibraryView({ data, user, onNavigate, onSaveData, categories = [] }) {
+export default function LibraryView({ data, user, onNavigate, onSaveData, categories = [], onAddCategory, onUpdateCategory, onRemoveCategory }) {
   const [newItemName, setNewItemName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState(categories[0] || '');
   const [newItemNote, setNewItemNote] = useState('');
@@ -43,6 +43,10 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [adding, setAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [editingCatIndex, setEditingCatIndex] = useState(null);
+  const [editCatName, setEditCatName] = useState('');
   const fileInputRef = useRef(null);
 
   const { uploadPhoto, deletePhoto, uploading } = useItemPhoto(user);
@@ -142,7 +146,17 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
     <div className="flex flex-col h-screen pb-16">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
-        <div className="text-lg font-bold text-center">物品庫</div>
+        <div className="flex items-center justify-between">
+          <div className="w-10" />
+          <div className="text-lg font-bold text-center">物品庫</div>
+          <button
+            onClick={() => setShowCategoryManager(true)}
+            className="p-2 -mr-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 dark:text-slate-500"
+            aria-label="管理分類"
+          >
+            <Tag size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Search bar */}
@@ -346,6 +360,99 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
           onConfirm={() => deleteItemFromLibrary(confirmDeleteId)}
           onCancel={() => setConfirmDeleteId(null)}
         />
+      )}
+
+      {/* Category manager bottom sheet */}
+      {showCategoryManager && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => { setShowCategoryManager(false); setNewCatName(''); setEditingCatIndex(null); }}
+          />
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom">
+            <div className="p-4">
+              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-4" />
+              <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">管理分類</div>
+
+              <div className="max-h-64 overflow-y-auto mb-4 space-y-1">
+                {categories.map((cat, index) => (
+                  <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-700 rounded-xl">
+                    {editingCatIndex === index ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          value={editCatName}
+                          onChange={e => setEditCatName(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { onUpdateCategory(cat, editCatName); setEditingCatIndex(null); }
+                            if (e.key === 'Escape') setEditingCatIndex(null);
+                          }}
+                          className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <button
+                          onClick={() => { onUpdateCategory(cat, editCatName); setEditingCatIndex(null); }}
+                          className="p-1.5 text-emerald-600 active:bg-emerald-50 dark:active:bg-emerald-900/30 rounded-lg"
+                        >
+                          <Check size={16} />
+                        </button>
+                        <button
+                          onClick={() => setEditingCatIndex(null)}
+                          className="p-1.5 text-slate-400 active:bg-slate-100 dark:active:bg-slate-600 rounded-lg"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat}</span>
+                        <div className="flex gap-0.5">
+                          <button
+                            onClick={() => { setEditingCatIndex(index); setEditCatName(cat); }}
+                            className="p-1.5 text-slate-400 active:text-indigo-600 rounded-lg min-w-[32px] min-h-[32px] flex items-center justify-center"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          {categories.length > 1 && (
+                            <button
+                              onClick={() => { if (confirm(`確定刪除分類「${cat}」？`)) onRemoveCategory(cat); }}
+                              className="p-1.5 text-slate-400 active:text-rose-500 rounded-lg min-w-[32px] min-h-[32px] flex items-center justify-center"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCatName}
+                  onChange={e => setNewCatName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && newCatName.trim()) { onAddCategory(newCatName); setNewCatName(''); } }}
+                  placeholder="新增分類..."
+                  className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+                />
+                <button
+                  onClick={() => { if (newCatName.trim()) { onAddCategory(newCatName); setNewCatName(''); } }}
+                  disabled={!newCatName.trim()}
+                  className="px-5 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px] disabled:opacity-40"
+                >
+                  新增
+                </button>
+              </div>
+
+              <button
+                onClick={() => { setShowCategoryManager(false); setNewCatName(''); setEditingCatIndex(null); }}
+                className="w-full mt-3 py-3 text-slate-500 dark:text-slate-400 font-medium min-h-[44px]"
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
