@@ -106,7 +106,6 @@ export default function AdminSharing({ data, shared }) {
                                     onChange={e => setEmailInput(e.target.value)}
                                     placeholder="email"
                                     className="px-2 py-0.5 text-xs border border-slate-300 dark:border-slate-600 rounded w-40 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                                    autoFocus
                                   />
                                   <button type="submit" className="text-emerald-600 dark:text-emerald-400"><Plus size={14} /></button>
                                   <button type="button" onClick={() => { setAddingEmail({}); setEmailInput(''); }} className="text-slate-400"><X size={14} /></button>
@@ -148,7 +147,7 @@ export default function AdminSharing({ data, shared }) {
                       </div>
                       {addingEmail[id] ? (
                         <form onSubmit={e => { e.preventDefault(); handleAddUser(id); }} className="flex gap-2">
-                          <input value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="輸入 email" className="flex-1 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" autoFocus />
+                          <input value={emailInput} onChange={e => setEmailInput(e.target.value)} placeholder="輸入 email" className="flex-1 px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100" />
                           <button type="submit" className="px-2 py-1 text-sm bg-indigo-600 text-white rounded-lg">新增</button>
                           <button type="button" onClick={() => { setAddingEmail({}); setEmailInput(''); }} className="px-2 py-1 text-sm bg-slate-200 dark:bg-slate-600 dark:text-slate-200 rounded-lg">取消</button>
                         </form>

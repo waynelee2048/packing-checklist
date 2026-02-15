@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { Search, X, StickyNote, Camera, Loader2, Plus } from 'lucide-react';
-import { categories } from '../utils/data';
 import { useItemPhoto } from '../hooks/useItemPhoto';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -33,9 +32,9 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
-export default function LibraryView({ data, user, onNavigate, onSaveData }) {
+export default function LibraryView({ data, user, onNavigate, onSaveData, categories = [] }) {
   const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState(categories[0]);
+  const [newItemCategory, setNewItemCategory] = useState(categories[0] || '');
   const [newItemNote, setNewItemNote] = useState('');
   const [newItemPhoto, setNewItemPhoto] = useState(null); // File object
   const [newItemPhotoPreview, setNewItemPhotoPreview] = useState(null); // blob URL
@@ -261,7 +260,6 @@ export default function LibraryView({ data, user, onNavigate, onSaveData }) {
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
               placeholder="物品名稱..."
-              autoFocus
               className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-2 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
             />
             <select

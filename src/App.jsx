@@ -3,6 +3,7 @@ import { Agentation } from 'agentation';
 import { useFirebase } from './hooks/useFirebase';
 import { useSharedLists } from './hooks/useSharedLists';
 import { useAdmin } from './hooks/useAdmin';
+import { useCategories } from './hooks/useCategories';
 import { usePWA } from './hooks/usePWA';
 import { useTheme } from './hooks/useTheme';
 import { loadFromLocal } from './utils/data';
@@ -16,12 +17,13 @@ import BottomTabBar from './components/BottomTabBar';
 import UpdatePrompt from './components/UpdatePrompt';
 
 function App() {
-  const [currentView, setCurrentView] = useState('checklist');
+  const [currentView, setCurrentView] = useState('lists');
   const [activeSharedListId, setActiveSharedListId] = useState(null);
   const initialData = loadFromLocal();
   const { user, data, syncStatus, saveData, handleLogin, handleLogout } = useFirebase(initialData);
   const shared = useSharedLists(user, data);
   const admin = useAdmin(user);
+  const { categories, addCategory, updateCategory, removeCategory } = useCategories();
   const { needRefresh, refresh, dismiss } = usePWA();
   const { preference: themePreference, changeTheme: onThemeChange } = useTheme();
 
@@ -47,6 +49,7 @@ function App() {
           onSaveData={saveData}
           shared={shared}
           activeSharedListId={activeSharedListId}
+          categories={categories}
         />
       )}
       {currentView === 'lists' && (
@@ -64,6 +67,7 @@ function App() {
           user={user}
           onNavigate={navigate}
           onSaveData={saveData}
+          categories={categories}
         />
       )}
       {currentView === 'addItems' && (
@@ -71,6 +75,7 @@ function App() {
           data={data}
           onNavigate={navigate}
           onSaveData={saveData}
+          categories={categories}
         />
       )}
       {currentView === 'profile' && (
@@ -93,6 +98,8 @@ function App() {
           onNavigate={navigate}
           onSaveData={saveData}
           admin={admin}
+          categories={categories}
+          categoryActions={{ addCategory, updateCategory, removeCategory }}
         />
       )}
       {currentView === 'admin' && !admin.isAdmin && !admin.loading && (
@@ -103,7 +110,7 @@ function App() {
       )}
       {showTabBar && (
         <BottomTabBar
-          currentView={currentView}
+          currentView={currentView === 'checklist' ? 'lists' : currentView}
           onNavigate={(view) => navigate(view, { sharedListId: null })}
         />
       )}

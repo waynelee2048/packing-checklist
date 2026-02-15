@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import { LayoutDashboard, Package, FileText, Share2, Shield, ArrowLeft, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, Share2, Shield, Tag, ArrowLeft, Menu, X } from 'lucide-react';
 import AdminDashboard from './AdminDashboard';
 import AdminItems from './AdminItems';
 import AdminTemplates from './AdminTemplates';
 import AdminSharing from './AdminSharing';
 import AdminAccounts from './AdminAccounts';
+import AdminCategories from './AdminCategories';
 
 const sections = [
   { key: 'dashboard', label: '總覽', icon: LayoutDashboard },
   { key: 'items', label: '物品管理', icon: Package },
+  { key: 'categories', label: '分類管理', icon: Tag },
   { key: 'templates', label: '清單範本', icon: FileText },
   { key: 'sharing', label: '分享管理', icon: Share2 },
   { key: 'accounts', label: '帳號管理', icon: Shield },
 ];
 
-export default function AdminView({ data, user, shared, onNavigate, onSaveData, admin }) {
+export default function AdminView({ data, user, shared, onNavigate, onSaveData, admin, categories, categoryActions }) {
   const [activeSection, setActiveSection] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -58,7 +60,9 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
       case 'dashboard':
         return <AdminDashboard data={data} shared={shared} />;
       case 'items':
-        return <AdminItems data={data} onSaveData={onSaveData} />;
+        return <AdminItems data={data} onSaveData={onSaveData} categories={categories} />;
+      case 'categories':
+        return <AdminCategories categories={categories} {...categoryActions} />;
       case 'templates':
         return <AdminTemplates data={data} onSaveData={onSaveData} />;
       case 'sharing':

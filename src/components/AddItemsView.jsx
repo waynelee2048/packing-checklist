@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { ChevronLeft, Check, StickyNote, Plus, X, Search } from 'lucide-react';
-import { categories } from '../utils/data';
 
-export default function AddItemsView({ data, onNavigate, onSaveData }) {
+export default function AddItemsView({ data, onNavigate, onSaveData, categories = [] }) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState(categories[0]);
+  const [newItemCategory, setNewItemCategory] = useState(categories[0] || '');
   const [searchQuery, setSearchQuery] = useState('');
   const list = data.lists?.find(l => l.id === data.activeListId);
   const safeList = list ? {
@@ -40,6 +39,31 @@ export default function AddItemsView({ data, onNavigate, onSaveData }) {
             ? checkedItems.filter(id => id !== itemId)
             : checkedItems
         };
+      })
+    };
+    onSaveData(newData);
+  };
+
+  const toggleCategoryAll = (categoryItems) => {
+    const listItems = safeList?.items || [];
+    const allInList = categoryItems.every(item => listItems.includes(item.id));
+    const newData = {
+      ...data,
+      lists: data.lists.map(l => {
+        if (l.id !== data.activeListId) return l;
+        const items = Array.isArray(l.items) ? l.items : [];
+        const checkedItems = Array.isArray(l.checkedItems) ? l.checkedItems : [];
+        if (allInList) {
+          const removeIds = new Set(categoryItems.map(i => i.id));
+          return {
+            ...l,
+            items: items.filter(id => !removeIds.has(id)),
+            checkedItems: checkedItems.filter(id => !removeIds.has(id))
+          };
+        } else {
+          const toAdd = categoryItems.filter(i => !items.includes(i.id)).map(i => i.id);
+          return { ...l, items: [...items, ...toAdd] };
+        }
       })
     };
     onSaveData(newData);
@@ -134,9 +158,23 @@ export default function AddItemsView({ data, onNavigate, onSaveData }) {
             : groupedItems[category];
           if (items.length === 0) return null;
 
+          const listItems = safeList?.items || [];
+          const allInList = items.length > 0 && items.every(item => listItems.includes(item.id));
+
           return (
             <div key={category} className="mb-4">
-              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mb-2">{category}</div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold">{category}</span>
+                <button
+                  onClick={() => toggleCategoryAll(items)}
+                  className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors duration-150 min-h-[28px]
+                    ${allInList
+                      ? 'text-rose-500 bg-rose-50 dark:bg-rose-900/30 active:bg-rose-100 dark:active:bg-rose-900/50'
+                      : 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 active:bg-indigo-100 dark:active:bg-indigo-900/50'}`}
+                >
+                  {allInList ? '全部移除' : '全部加入'}
+                </button>
+              </div>
               <div className="space-y-2">
                 {items.map(item => {
                   const isInList = safeList?.items.includes(item.id);
@@ -197,7 +235,6 @@ export default function AddItemsView({ data, onNavigate, onSaveData }) {
             value={newItemName}
             onChange={e => setNewItemName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAddItem(); }}
-            autoFocus
             className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <select

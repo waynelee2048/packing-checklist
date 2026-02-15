@@ -1,7 +1,6 @@
-import { CheckSquare, LayoutList, Package, User } from 'lucide-react';
+import { LayoutList, Package, User } from 'lucide-react';
 
 const tabs = [
-  { id: 'checklist', label: '清單', icon: CheckSquare },
   { id: 'lists', label: '所有清單', icon: LayoutList },
   { id: 'library', label: '物品庫', icon: Package },
   { id: 'profile', label: '設定', icon: User },

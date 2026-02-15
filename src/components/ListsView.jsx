@@ -439,20 +439,29 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
           </div>
         )}
 
-        {/* Add new list */}
+        {/* Add new list trigger */}
         <div className="mt-4">
-          {showAddForm ? (
-            <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-slate-500 dark:text-slate-400">新增清單</div>
-                <button
-                  onClick={() => { setShowAddForm(false); setNewListName(''); setNewListIcon('clipboard-list'); }}
-                  className="p-1 text-slate-400 active:text-slate-600 transition-colors duration-150"
-                  aria-label="收起"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 font-medium active:bg-slate-50 dark:active:bg-slate-800 transition-colors duration-150 flex items-center justify-center gap-2"
+          >
+            <Plus size={18} />
+            新增清單
+          </button>
+        </div>
+      </div>
+
+      {/* Add new list bottom sheet */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => { setShowAddForm(false); setNewListName(''); setNewListIcon('clipboard-list'); }}
+          />
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom">
+            <div className="p-4">
+              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-4" />
+              <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">新增清單</div>
               <div className="flex gap-1 mb-3 flex-wrap">
                 {iconOptions.map(iconName => (
                   <button
@@ -473,7 +482,6 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                   onChange={(e) => setNewListName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') addNewList(); }}
                   placeholder="清單名稱..."
-                  autoFocus
                   className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
                 />
                 <button
@@ -484,17 +492,9 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                 </button>
               </div>
             </div>
-          ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full py-3 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl text-slate-500 dark:text-slate-400 font-medium active:bg-slate-50 dark:active:bg-slate-800 transition-colors duration-150 flex items-center justify-center gap-2"
-            >
-              <Plus size={18} />
-              新增清單
-            </button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Share Panel */}
       {sharePanelListId !== null && (

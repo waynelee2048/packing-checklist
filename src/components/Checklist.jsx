@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2 } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Icon from './Icon';
-import { categories, encodeEmail } from '../utils/data';
+import { encodeEmail } from '../utils/data';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
   return (
@@ -118,7 +118,8 @@ export default function Checklist({
   onNavigate,
   onSaveData,
   shared,
-  activeSharedListId
+  activeSharedListId,
+  categories = []
 }) {
   const [expandedNotes, setExpandedNotes] = useState([]);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -128,7 +129,7 @@ export default function Checklist({
   const [sortMode, setSortMode] = useState('default'); // 'default' | 'name' | 'unchecked' | 'manual'
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddName, setQuickAddName] = useState('');
-  const [quickAddCategory, setQuickAddCategory] = useState(categories[0]);
+  const [quickAddCategory, setQuickAddCategory] = useState(categories[0] || '');
   const [confirmRemoveItem, setConfirmRemoveItem] = useState(null);
 
   // Determine mode: 'shared-with-me', 'own-shared', or 'local'
@@ -476,7 +477,14 @@ export default function Checklist({
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <button
+              onClick={() => onNavigate('lists')}
+              className="p-1 -ml-1 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center flex-shrink-0"
+              aria-label="返回所有清單"
+            >
+              <ChevronLeft size={22} className="text-slate-500 dark:text-slate-400" />
+            </button>
             <Icon name={displayIcon} size={22} className="text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
             <span className="text-lg font-bold truncate">{displayName}</span>
             {mode === 'shared-with-me' && ownerLabel && (
@@ -668,7 +676,6 @@ export default function Checklist({
                 value={quickAddName}
                 onChange={e => setQuickAddName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); }}
-                autoFocus
                 className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
               <select

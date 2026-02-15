@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react';
 import { Search, Filter, Trash2, Edit3, Download, Upload, Check, X, Tag } from 'lucide-react';
-import { categories } from '../../utils/data';
 
-export default function AdminItems({ data, onSaveData }) {
+export default function AdminItems({ data, onSaveData, categories = [] }) {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [selected, setSelected] = useState(new Set());

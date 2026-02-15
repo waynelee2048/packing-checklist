@@ -1,6 +1,7 @@
 export const STORAGE_KEY = 'packing-checklist-data';
 
-export const categories = ['必備', '電子產品', '個人物品', '視天氣', '旅行', '運動'];
+export const defaultCategories = ['必備', '電子產品', '個人物品', '視天氣', '旅行', '運動'];
+export { defaultCategories as categories };
 
 export const iconOptions = [
   'clipboard-list', 'footprints', 'briefcase', 'plane', 'person-standing',
