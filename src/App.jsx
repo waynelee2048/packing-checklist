@@ -24,7 +24,7 @@ function App() {
   const shared = useSharedLists(user, data);
   const admin = useAdmin(user);
   const { categories, addCategory, updateCategory, removeCategory } = useCategories();
-  const { needRefresh, refresh, dismiss } = usePWA();
+  const { needRefresh, refresh, dismiss, checkForUpdate, checking: checkingUpdate } = usePWA();
   const { preference: themePreference, changeTheme: onThemeChange } = useTheme();
 
   const navigate = (view, params) => {
@@ -88,6 +88,8 @@ function App() {
           isAdmin={admin.isAdmin}
           themePreference={themePreference}
           onThemeChange={onThemeChange}
+          onCheckUpdate={checkForUpdate}
+          checkingUpdate={checkingUpdate}
         />
       )}
       {currentView === 'admin' && admin.isAdmin && (

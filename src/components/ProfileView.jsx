@@ -1,6 +1,6 @@
-import { LogIn, LogOut, Cloud, CloudOff, Loader, AlertCircle, LayoutDashboard, Sun, Monitor, Moon } from 'lucide-react';
+import { LogIn, LogOut, Cloud, CloudOff, Loader, AlertCircle, LayoutDashboard, Sun, Monitor, Moon, RefreshCw } from 'lucide-react';
 
-export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNavigate, isAdmin, themePreference, onThemeChange }) {
+export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNavigate, isAdmin, themePreference, onThemeChange, onCheckUpdate, checkingUpdate }) {
   const statusConfig = {
     offline: { icon: CloudOff, color: 'text-slate-400', label: '離線模式', bg: 'bg-slate-50 dark:bg-slate-800' },
     syncing: { icon: Loader, color: 'text-amber-500', label: '同步中...', bg: 'bg-amber-50 dark:bg-amber-900/30' },
@@ -122,6 +122,14 @@ export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNav
               <span className="text-slate-900 dark:text-slate-100 font-medium">1.0.0</span>
             </div>
           </div>
+          <button
+            onClick={onCheckUpdate}
+            disabled={checkingUpdate}
+            className="w-full mt-3 flex items-center justify-center gap-2 py-3 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-xl font-medium active:bg-slate-50 dark:active:bg-slate-700 transition-colors duration-150 disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={checkingUpdate ? 'animate-spin' : ''} />
+            {checkingUpdate ? '檢查中...' : '檢查更新'}
+          </button>
         </div>
       </div>
     </div>
