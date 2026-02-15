@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ref, set, onValue, update, remove, push } from 'firebase/database';
+import { ref, set, get, onValue, update, remove, push } from 'firebase/database';
 import { db } from '../utils/firebase';
 import { encodeEmail, sanitizeSharedList } from '../utils/data';
 
@@ -271,16 +271,17 @@ export function useSharedLists(user, data) {
 
   // Add item to shared list (for receivers with edit permission)
   const addSharedItem = useCallback(async (sharedListId, item) => {
-    const sharedData = sharedWithMe[sharedListId];
-    if (!sharedData) return;
-    const currentItems = sharedData.items || [];
+    const itemsRef = ref(db, `sharedLists/${sharedListId}/items`);
+    const snapshot = await get(itemsRef);
+    const currentItems = snapshot.val() || [];
     const newItems = [...currentItems, item];
-    await set(ref(db, `sharedLists/${sharedListId}/items`), newItems);
-  }, [sharedWithMe]);
+    await set(itemsRef, newItems);
+  }, []);
 
   // Remove item from shared list
   const removeSharedItem = useCallback(async (sharedListId, itemId) => {
-    const sharedData = sharedWithMe[sharedListId] || sharedByMe[sharedListId];
+    const snapshot = await get(ref(db, `sharedLists/${sharedListId}`));
+    const sharedData = snapshot.val();
     if (!sharedData) return;
     const newItems = (sharedData.items || []).filter(i => i.id !== itemId);
     const newChecked = (sharedData.checkedItems || []).filter(id => id !== itemId);
@@ -288,23 +289,21 @@ export function useSharedLists(user, data) {
     updates[`sharedLists/${sharedListId}/items`] = newItems;
     updates[`sharedLists/${sharedListId}/checkedItems`] = newChecked;
     await update(ref(db), updates);
-  }, [sharedWithMe, sharedByMe]);
+  }, []);
 
   // Toggle check on shared list
   const toggleSharedCheck = useCallback(async (sharedListId, itemId) => {
-    // Read from the correct source
-    const sharedData = sharedWithMe[sharedListId] || sharedByMe[sharedListId];
-    if (!sharedData) return;
+    const checkedRef = ref(db, `sharedLists/${sharedListId}/checkedItems`);
+    const snapshot = await get(checkedRef);
+    const checkedItems = snapshot.val() || [];
 
-    const checkedItems = Array.isArray(sharedData.checkedItems) ? sharedData.checkedItems : [];
     const isChecked = checkedItems.includes(itemId);
     const newChecked = isChecked
       ? checkedItems.filter(id => id !== itemId)
       : [...checkedItems, itemId];
 
-    const listRef = ref(db, `sharedLists/${sharedListId}/checkedItems`);
-    await set(listRef, newChecked);
-  }, [sharedWithMe, sharedByMe]);
+    await set(checkedRef, newChecked);
+  }, []);
 
   // Reset all checks on shared list
   const resetSharedChecks = useCallback(async (sharedListId) => {
