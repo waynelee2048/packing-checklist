@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { ref, set, onValue } from 'firebase/database';
 import { auth, db, provider } from '../utils/firebase';
 import { sanitizeData, loadFromLocal, saveToLocal } from '../utils/data';
@@ -58,24 +58,23 @@ export function useFirebase(initialData) {
     }
   }, [user, saveDataToFirebase]);
 
-  // Handle login — PWA standalone 模式用 redirect，否則用 popup
+  // Handle login
   const handleLogin = useCallback(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
       || window.navigator.standalone === true;
 
-    if (isStandalone) {
-      signInWithRedirect(auth, provider);
-    } else {
-      signInWithPopup(auth, provider)
-        .catch(err => {
-          // popup 被擋時 fallback 到 redirect
-          if (err.code === 'auth/popup-blocked' || err.code === 'auth/popup-closed-by-user') {
-            signInWithRedirect(auth, provider);
-          } else {
-            console.error('登入失敗', err);
+    signInWithPopup(auth, provider)
+      .catch(err => {
+        console.error('登入失敗', err);
+        if (isStandalone) {
+          // PWA standalone 模式下 popup 可能無法正常運作
+          // 引導使用者在瀏覽器中開啟
+          const url = window.location.origin + window.location.pathname;
+          if (confirm('PWA 模式下登入可能受限，是否在瀏覽器中開啟登入？')) {
+            window.open(url, '_blank');
           }
-        });
-    }
+        }
+      });
   }, []);
 
   // Handle logout
@@ -92,13 +91,6 @@ export function useFirebase(initialData) {
       .catch(err => {
         console.error('登出失敗', err);
       });
-  }, []);
-
-  // Handle redirect result (for PWA standalone login)
-  useEffect(() => {
-    getRedirectResult(auth).catch(() => {
-      // no redirect result — normal flow
-    });
   }, []);
 
   // Listen to auth state changes
