@@ -35,6 +35,14 @@ html, body {
   padding-top: env(safe-area-inset-top, 0);
 }
 
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.pb-tabbar {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0));
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
