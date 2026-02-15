@@ -140,6 +140,9 @@ export function useSharedLists(user, data) {
   }, [user, data?.lists, subscribeToSharedList, removeListener]);
 
   // Auto-sync: when data.lists or itemLibrary changes, update shared list items
+  // Key principle: treat Firebase shared items as source of truth.
+  // Only update content of existing owner items, add new owner items,
+  // and preserve receiver-added items. Never re-add items that were removed.
   useEffect(() => {
     if (!user || !data?.lists || !data?.itemLibrary) return;
 
@@ -148,21 +151,28 @@ export function useSharedLists(user, data) {
       const sharedData = sharedByMe[list.sharedListId];
       if (!sharedData) return;
 
-      // Build embedded items from current itemLibrary (owner's items)
-      const embeddedItems = (Array.isArray(list.items) ? list.items : [])
+      const currentItems = sharedData.items || [];
+      const currentItemIds = new Set(currentItems.map(i => i.id));
+      const ownerItemIds = new Set(Array.isArray(list.items) ? list.items : []);
+
+      // 1. Update existing owner items (refresh name/note/category/photo)
+      const updatedExisting = currentItems.map(item => {
+        if (!ownerItemIds.has(item.id)) return item; // receiver item — keep as-is
+        const libItem = data.itemLibrary.find(li => li.id === item.id);
+        if (!libItem) return item; // item removed from library — keep as-is
+        const { id, name, category, note, photoURL } = libItem;
+        return { id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) };
+      });
+
+      // 2. Add owner items that are new (in list.items but not yet in shared)
+      const newOwnerItems = (Array.isArray(list.items) ? list.items : [])
+        .filter(id => !currentItemIds.has(id))
         .map(id => data.itemLibrary.find(item => item.id === id))
         .filter(Boolean)
-        .map(({ id, name, category, note, photoURL }) => ({ id, name, category, note, ...(photoURL && { photoURL }) }));
+        .map(({ id, name, category, note, photoURL }) => ({ id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) }));
 
-      // Preserve receiver-added items (IDs not in owner's list.items)
-      const ownerItemIds = new Set(Array.isArray(list.items) ? list.items : []);
-      const sharedUserItems = (sharedData.items || []).filter(
-        item => !ownerItemIds.has(item.id)
-      );
-      const mergedItems = [...embeddedItems, ...sharedUserItems];
+      const mergedItems = [...updatedExisting, ...newOwnerItems];
 
-      // Compare with current shared items
-      const currentItems = sharedData.items || [];
       const changed = JSON.stringify(mergedItems) !== JSON.stringify(currentItems);
 
       if (changed) {
@@ -184,7 +194,7 @@ export function useSharedLists(user, data) {
     const embeddedItems = (Array.isArray(list.items) ? list.items : [])
       .map(id => itemLibrary.find(item => item.id === id))
       .filter(Boolean)
-      .map(({ id, name, category, note, photoURL }) => ({ id, name, category, note, ...(photoURL && { photoURL }) }));
+      .map(({ id, name, category, note, photoURL }) => ({ id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) }));
 
     // Build sharedWith map
     const sharedWith = {};
