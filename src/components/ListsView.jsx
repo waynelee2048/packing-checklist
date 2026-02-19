@@ -54,7 +54,7 @@ function SortableListItem({ list, isActive }) {
     position: 'relative',
   };
 
-  const itemCount = (list.items || []).length;
+  const itemCount = list.disposable ? (list.inlineItems || []).length : (list.items || []).length;
   const checkedCount = (list.checkedItems || []).length;
   const isShared = !!list.sharedListId;
 
@@ -91,6 +91,7 @@ function SortableListItem({ list, isActive }) {
 export default function ListsView({ data, user, onNavigate, onSaveData, shared }) {
   const [newListName, setNewListName] = useState('');
   const [newListIcon, setNewListIcon] = useState('clipboard-list');
+  const [newListDisposable, setNewListDisposable] = useState(false);
   const [sharePanelListId, setSharePanelListId] = useState(null);
   const [sharePanelSharedId, setSharePanelSharedId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
@@ -119,7 +120,8 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
       name: newListName.trim(),
       icon: newListIcon,
       items: [],
-      checkedItems: []
+      checkedItems: [],
+      ...(newListDisposable ? { disposable: true, inlineItems: [] } : {})
     };
 
     const newData = {
@@ -131,6 +133,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     onSaveData(newData);
     setNewListName('');
     setNewListIcon('clipboard-list');
+    setNewListDisposable(false);
     setShowAddForm(false);
     onNavigate('checklist', { sharedListId: null });
   };
@@ -282,7 +285,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
     }
     if (sortMode === 'progress') {
       const getProgress = (list) => {
-        const total = (list.items || []).length;
+        const total = list.disposable ? (list.inlineItems || []).length : (list.items || []).length;
         if (total === 0) return 0;
         return (list.checkedItems || []).length / total;
       };
@@ -356,7 +359,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         ) : (
           <div className="space-y-2">
             {sortedLists.map(list => {
-              const itemCount = (list.items || []).length;
+              const itemCount = list.disposable ? (list.inlineItems || []).length : (list.items || []).length;
               const checkedCount = (list.checkedItems || []).length;
               const isActive = list.id === data.activeListId;
               const isShared = !!list.sharedListId;
@@ -374,6 +377,9 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-slate-800 dark:text-slate-100 flex items-center">
                       <span className="truncate">{list.name}</span>
+                      {list.disposable && (
+                        <span className="ml-2 text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 flex-shrink-0">一次性</span>
+                      )}
                       {isShared && (
                         <span className="ml-2 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
                       )}
@@ -456,7 +462,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
         <div className="fixed inset-0 z-50 flex items-end justify-center">
           <div
             className="absolute inset-0 bg-black bg-opacity-50"
-            onClick={() => { setShowAddForm(false); setNewListName(''); setNewListIcon('clipboard-list'); }}
+            onClick={() => { setShowAddForm(false); setNewListName(''); setNewListIcon('clipboard-list'); setNewListDisposable(false); }}
           />
           <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom">
             <div className="p-4">
@@ -475,6 +481,23 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                   </button>
                 ))}
               </div>
+              <label className="flex items-center justify-between mb-3 px-1">
+                <span className="text-sm text-slate-600 dark:text-slate-300">一次性清單</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={newListDisposable}
+                  onClick={() => setNewListDisposable(v => !v)}
+                  className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${newListDisposable ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${newListDisposable ? 'translate-x-5' : ''}`} />
+                </button>
+              </label>
+              {newListDisposable && (
+                <div className="text-xs text-amber-600 dark:text-amber-400 mb-3 px-1">
+                  純文字項目，用完即刪，不會加入物品庫
+                </div>
+              )}
               <div className="flex gap-2">
                 <input
                   type="text"

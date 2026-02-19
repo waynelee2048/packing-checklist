@@ -1,4 +1,4 @@
-# Project: 打包清單 (Packing Checklist PWA)
+# Project: 打包清單 (Packing Checklist)
 
 ## Build & Deploy
 
@@ -18,6 +18,5 @@ Use semver patch increment (e.g. 1.0.0 → 1.0.1 → 1.0.2).
 
 - React + Vite + Tailwind CSS
 - Firebase (Auth, Realtime Database, Storage)
-- PWA with vite-plugin-pwa (registerType: 'prompt')
 - Hosted on GitHub Pages with Cloudflare CDN
 - Firebase auth proxied via Cloudflare Worker (authDomain: packing.kkleekk.com)

@@ -152,6 +152,22 @@ export function useSharedLists(user, data) {
       if (!sharedData) return;
 
       const currentItems = sharedData.items || [];
+
+      if (list.disposable) {
+        // Disposable: sync inlineItems directly
+        const inlineItems = Array.isArray(list.inlineItems) ? list.inlineItems : [];
+        const changed = JSON.stringify(inlineItems) !== JSON.stringify(currentItems);
+        if (changed) {
+          const listRef = ref(db, `sharedLists/${list.sharedListId}`);
+          update(listRef, {
+            items: inlineItems,
+            name: list.name,
+            icon: list.icon
+          });
+        }
+        return;
+      }
+
       const currentItemIds = new Set(currentItems.map(i => i.id));
       const ownerItemIds = new Set(Array.isArray(list.items) ? list.items : []);
 
@@ -190,11 +206,13 @@ export function useSharedLists(user, data) {
   const shareList = useCallback(async (list, itemLibrary, emails) => {
     if (!user) return null;
 
-    // Build embedded items
-    const embeddedItems = (Array.isArray(list.items) ? list.items : [])
-      .map(id => itemLibrary.find(item => item.id === id))
-      .filter(Boolean)
-      .map(({ id, name, category, note, photoURL }) => ({ id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) }));
+    // Build embedded items — disposable lists already have inline items
+    const embeddedItems = list.disposable
+      ? (Array.isArray(list.inlineItems) ? list.inlineItems : [])
+      : (Array.isArray(list.items) ? list.items : [])
+          .map(id => itemLibrary.find(item => item.id === id))
+          .filter(Boolean)
+          .map(({ id, name, category, note, photoURL }) => ({ id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) }));
 
     // Build sharedWith map
     const sharedWith = {};

@@ -68,6 +68,7 @@ export function sanitizeData(data) {
       ...list,
       items: Array.isArray(list.items) ? list.items : [],
       checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : [],
+      inlineItems: Array.isArray(list.inlineItems) ? list.inlineItems : [],
       ...(list.sharedListId ? { sharedListId: list.sharedListId } : {})
     })) : defaultData.lists,
     activeListId: data.activeListId || defaultData.activeListId,

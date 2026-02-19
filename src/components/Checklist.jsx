@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2 } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2, Send } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Icon from './Icon';
+import UndoToast from './UndoToast';
 import { encodeEmail } from '../utils/data';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -131,6 +132,9 @@ export default function Checklist({
   const [quickAddName, setQuickAddName] = useState('');
   const [quickAddCategory, setQuickAddCategory] = useState(categories[0] || '');
   const [confirmRemoveItem, setConfirmRemoveItem] = useState(null);
+  const [undoToast, setUndoToast] = useState(null);
+  const [disposableInput, setDisposableInput] = useState('');
+  const [confirmDisposableDelete, setConfirmDisposableDelete] = useState(false);
 
   // Determine mode: 'shared-with-me', 'own-shared', or 'local'
   const isSharedWithMe = activeSharedListId && shared?.sharedWithMe?.[activeSharedListId];
@@ -158,8 +162,11 @@ export default function Checklist({
   const safeList = list ? {
     ...list,
     items: Array.isArray(list.items) ? list.items : [],
-    checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : []
+    checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : [],
+    inlineItems: Array.isArray(list.inlineItems) ? list.inlineItems : []
   } : null;
+
+  const isDisposable = !!(safeList?.disposable);
 
   // Build items and checkedItems based on mode
   let items = [];
@@ -175,14 +182,24 @@ export default function Checklist({
     displayIcon = sharedData.icon || 'clipboard-list';
     ownerLabel = sharedData.ownerName || sharedData.ownerEmail || '';
   } else if (mode === 'own-shared' && safeList && sharedData) {
-    items = safeList.items
-      .map(id => data.itemLibrary?.find(item => item.id === id))
-      .filter(Boolean);
+    if (isDisposable) {
+      items = safeList.inlineItems;
+    } else {
+      items = safeList.items
+        .map(id => data.itemLibrary?.find(item => item.id === id))
+        .filter(Boolean);
+    }
     checkedItems = sharedData.checkedItems || [];
     displayName = safeList.name || '清單';
     displayIcon = safeList.icon || 'clipboard-list';
+  } else if (isDisposable && safeList) {
+    // disposable local mode
+    items = safeList.inlineItems;
+    checkedItems = safeList.checkedItems;
+    displayName = safeList.name || '清單';
+    displayIcon = safeList.icon || 'clipboard-list';
   } else {
-    // local mode
+    // regular local mode
     items = safeList
       ? safeList.items
           .map(id => data.itemLibrary?.find(item => item.id === id))
@@ -285,8 +302,10 @@ export default function Checklist({
     onSaveData(newData);
   };
 
-  const toggleItemCheck = (itemId) => {
+  const toggleItemCheck = (itemId, skipToast) => {
     setLastToggledId(itemId);
+    const wasChecked = checkedItems.includes(itemId);
+
     if (mode === 'shared-with-me' || mode === 'own-shared') {
       shared.toggleSharedCheck(activeSharedListId, itemId);
     } else {
@@ -305,6 +324,17 @@ export default function Checklist({
         })
       };
       onSaveData(newData);
+    }
+
+    if (!skipToast) {
+      const item = items.find(i => i.id === itemId);
+      if (item) {
+        setUndoToast({
+          itemId,
+          itemName: item.name,
+          isChecked: !wasChecked,
+        });
+      }
     }
   };
 
@@ -337,6 +367,63 @@ export default function Checklist({
       onSaveData(newData);
     }
   };
+
+  // Disposable: add inline item
+  const addDisposableItem = (name) => {
+    if (!safeList || !name.trim()) return;
+    const newItem = { id: 'd_' + Date.now(), name: name.trim() };
+    const newData = {
+      ...data,
+      lists: data.lists.map(l =>
+        l.id === data.activeListId
+          ? { ...l, inlineItems: [...(Array.isArray(l.inlineItems) ? l.inlineItems : []), newItem] }
+          : l
+      )
+    };
+    onSaveData(newData);
+  };
+
+  // Disposable: remove inline item
+  const removeDisposableItem = (itemId) => {
+    if (!safeList) return;
+    const newData = {
+      ...data,
+      lists: data.lists.map(l => {
+        if (l.id !== data.activeListId) return l;
+        return {
+          ...l,
+          inlineItems: (l.inlineItems || []).filter(i => i.id !== itemId),
+          checkedItems: (l.checkedItems || []).filter(id => id !== itemId)
+        };
+      })
+    };
+    onSaveData(newData);
+  };
+
+  // Disposable: delete the entire list
+  const deleteDisposableList = () => {
+    const newLists = data.lists.filter(l => l.id !== data.activeListId);
+    const newData = {
+      ...data,
+      lists: newLists,
+      activeListId: newLists.length > 0 ? newLists[0].id : data.activeListId
+    };
+    onSaveData(newData);
+    onNavigate('lists');
+  };
+
+  // Disposable: trigger completion dialog after celebration
+  const prevAllCheckedForDisposableRef = useRef(false);
+  useEffect(() => {
+    if (isDisposable && allChecked && totalCount > 0 && !prevAllCheckedForDisposableRef.current) {
+      const timer = setTimeout(() => setConfirmDisposableDelete(true), 2600);
+      prevAllCheckedForDisposableRef.current = true;
+      return () => clearTimeout(timer);
+    }
+    if (!allChecked) {
+      prevAllCheckedForDisposableRef.current = false;
+    }
+  }, [isDisposable, allChecked, totalCount]);
 
   const toggleNoteExpand = (itemId) => {
     setExpandedNotes(prev =>
@@ -446,6 +533,18 @@ export default function Checklist({
               <Trash2 size={16} />
             </button>
           )}
+          {isDisposable && mode !== 'shared-with-me' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeDisposableItem(item.id);
+              }}
+              className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+              aria-label="移除項目"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
         </div>
         {hasExtra && isNoteExpanded && (
           <div className="px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 border border-slate-200 dark:border-slate-700 border-t-0 rounded-b-xl">
@@ -490,6 +589,9 @@ export default function Checklist({
             {mode === 'shared-with-me' && ownerLabel && (
               <span className="text-xs text-indigo-500 dark:text-indigo-400 flex-shrink-0">來自 {ownerLabel}</span>
             )}
+            {isDisposable && (
+              <span className="text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 flex-shrink-0">一次性</span>
+            )}
             {mode === 'own-shared' && (
               <span className="text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 flex-shrink-0">已分享</span>
             )}
@@ -510,7 +612,7 @@ export default function Checklist({
                 )}
               </div>
             )}
-            {mode !== 'shared-with-me' && (
+            {mode !== 'shared-with-me' && !isDisposable && (
               <button
                 onClick={() => onNavigate('addItems')}
                 className="p-2 -mr-2 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[44px] min-h-[44px] flex items-center justify-center"
@@ -544,14 +646,16 @@ export default function Checklist({
           <div className="text-center py-16 text-slate-400">
             <Inbox size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
             <div className="text-lg mb-2">清單是空的</div>
-            {mode !== 'shared-with-me' && (
+            {isDisposable ? (
+              <div className="text-sm">在下方輸入框新增項目</div>
+            ) : mode !== 'shared-with-me' ? (
               <button
                 onClick={() => onNavigate('addItems')}
                 className="text-indigo-600 dark:text-indigo-400 font-medium active:text-indigo-700 dark:active:text-indigo-300 transition-colors duration-150"
               >
                 從物品庫加入物品
               </button>
-            )}
+            ) : null}
           </div>
         ) : (
           <div className="space-y-4">
@@ -565,7 +669,7 @@ export default function Checklist({
                   </div>
                 </SortableContext>
               </DndContext>
-            ) : sortMode === 'default' ? (
+            ) : sortMode === 'default' && !isDisposable ? (
               groupedByCategory.map(({ category, items: catItems }) => {
                 const isCollapsed = collapsedCategories.includes(category);
                 const catCheckedCount = catItems.filter(item => checkedItems.includes(item.id)).length;
@@ -658,8 +762,8 @@ export default function Checklist({
         />
       )}
 
-      {/* Quick add FAB — shown when canEdit */}
-      {canEdit && (
+      {/* Quick add FAB — shown when canEdit, hidden for disposable */}
+      {canEdit && !isDisposable && (
         <>
           {showQuickAdd && (
             <div
@@ -704,6 +808,57 @@ export default function Checklist({
             {showQuickAdd ? <X size={24} /> : <Plus size={24} />}
           </button>
         </>
+      )}
+
+      {undoToast && (
+        <UndoToast
+          message={undoToast.isChecked ? `✓ 已勾選 ${undoToast.itemName}` : `已取消勾選 ${undoToast.itemName}`}
+          onUndo={() => { toggleItemCheck(undoToast.itemId, true); setUndoToast(null); }}
+          onDismiss={() => setUndoToast(null)}
+        />
+      )}
+
+      {/* Disposable: bottom input bar */}
+      {isDisposable && mode !== 'shared-with-me' && (
+        <div className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 safe-bottom">
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={disposableInput}
+              onChange={e => setDisposableInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && disposableInput.trim()) {
+                  addDisposableItem(disposableInput);
+                  setDisposableInput('');
+                }
+              }}
+              placeholder="新增項目..."
+              className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+            />
+            <button
+              onClick={() => {
+                if (disposableInput.trim()) {
+                  addDisposableItem(disposableInput);
+                  setDisposableInput('');
+                }
+              }}
+              disabled={!disposableInput.trim()}
+              className="px-4 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150 min-h-[44px] flex items-center justify-center"
+              aria-label="新增"
+            >
+              <Send size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Disposable: completion delete dialog */}
+      {confirmDisposableDelete && (
+        <ConfirmDialog
+          message="清單完成！要刪除嗎？"
+          onConfirm={() => { setConfirmDisposableDelete(false); deleteDisposableList(); }}
+          onCancel={() => setConfirmDisposableDelete(false)}
+        />
       )}
     </div>
   );

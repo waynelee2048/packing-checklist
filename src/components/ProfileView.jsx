@@ -119,7 +119,7 @@ export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNav
             <div className="border-t border-slate-100 dark:border-slate-700" />
             <div className="flex justify-between py-2">
               <span>版本</span>
-              <span className="text-slate-900 dark:text-slate-100 font-medium">1.1.4</span>
+              <span className="text-slate-900 dark:text-slate-100 font-medium">1.1.6</span>
             </div>
           </div>
         </div>
