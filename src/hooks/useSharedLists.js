@@ -217,7 +217,7 @@ export function useSharedLists(user, data) {
     // Build sharedWith map
     const sharedWith = {};
     emails.forEach(email => {
-      sharedWith[encodeEmail(email)] = 'view';
+      sharedWith[encodeEmail(email)] = 'edit';
     });
 
     // Create shared list
@@ -250,7 +250,7 @@ export function useSharedLists(user, data) {
   const addSharedUser = useCallback(async (sharedListId, email) => {
     const encoded = encodeEmail(email);
     const updates = {};
-    updates[`sharedLists/${sharedListId}/sharedWith/${encoded}`] = 'view';
+    updates[`sharedLists/${sharedListId}/sharedWith/${encoded}`] = 'edit';
     updates[`sharedIndex/${encoded}/${sharedListId}`] = true;
     await update(ref(db), updates);
   }, []);
