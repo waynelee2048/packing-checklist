@@ -75,7 +75,7 @@ export default function AdminView({ data, user, shared, onNavigate, onSaveData, 
   };
 
   return (
-    <div className="h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="h-full bg-slate-50 dark:bg-slate-900">
       {/* Desktop layout */}
       <div className="hidden lg:grid lg:grid-cols-[240px_1fr] h-full">
         <aside className="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">

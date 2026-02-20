@@ -18,7 +18,7 @@ export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNav
   ];
 
   return (
-    <div className="flex flex-col h-screen pb-tabbar">
+    <div className="flex flex-col h-full pb-tabbar">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-3 safe-top">
         <div className="text-lg font-bold text-slate-900 dark:text-slate-50 text-center">設定</div>
@@ -119,7 +119,7 @@ export default function ProfileView({ user, syncStatus, onLogin, onLogout, onNav
             <div className="border-t border-slate-100 dark:border-slate-700" />
             <div className="flex justify-between py-2">
               <span>版本</span>
-              <span className="text-slate-900 dark:text-slate-100 font-medium">1.1.8</span>
+              <span className="text-slate-900 dark:text-slate-100 font-medium">1.1.9</span>
             </div>
           </div>
         </div>

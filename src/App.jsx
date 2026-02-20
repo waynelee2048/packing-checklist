@@ -104,7 +104,7 @@ function App() {
         />
       )}
       {currentView === 'admin' && !admin.isAdmin && !admin.loading && (
-        <div className="flex flex-col items-center justify-center h-screen p-4">
+        <div className="flex flex-col items-center justify-center h-full p-4">
           <p className="text-slate-500 dark:text-slate-400 mb-4">你沒有管理後台的存取權限</p>
           <button onClick={() => navigate('profile')} className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg">返回設定</button>
         </div>
