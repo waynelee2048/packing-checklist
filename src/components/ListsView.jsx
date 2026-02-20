@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trash2, Share2, X, Plus, Search, ArrowUpDown, GripVertical } from 'lucide-react';
+import { Trash2, Share2, MoreVertical, X, Plus, Search, ArrowUpDown, GripVertical } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -98,6 +98,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortMode, setSortMode] = useState('default'); // 'default' | 'name' | 'progress' | 'manual'
+  const [menuOpenId, setMenuOpenId] = useState(null);
 
   const selectList = (listId, sharedListId) => {
     const newData = {
@@ -386,25 +387,37 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
                     </div>
                     <div className="text-sm text-slate-400">{checkedCount}/{itemCount} 已確認</div>
                   </div>
-                  {user && (
+                  <div className="relative">
                     <button
-                      onClick={(e) => handleShareClick(list, e)}
-                      className={`p-2 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150
-                        ${isShared ? 'text-emerald-500 active:bg-emerald-50 dark:active:bg-emerald-900/30' : 'text-slate-400 active:bg-slate-100 dark:active:bg-slate-700'}`}
-                      aria-label="分享清單"
+                      onClick={(e) => { e.stopPropagation(); setMenuOpenId(menuOpenId === list.id ? null : list.id); }}
+                      className="p-2 text-slate-400 dark:text-slate-500 active:bg-slate-100 dark:active:bg-slate-700 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+                      aria-label="更多操作"
                     >
-                      <Share2 size={18} />
+                      <MoreVertical size={18} />
                     </button>
-                  )}
-                  {data.lists.length > 1 && (
-                    <button
-                      onClick={(e) => handleDeleteClick(list.id, e)}
-                      className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
-                      aria-label="刪除清單"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
+                    {menuOpenId === list.id && (
+                      <div className="absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg z-50 min-w-[140px] py-1 overflow-hidden">
+                        {user && (
+                          <button
+                            onClick={(e) => { handleShareClick(list, e); setMenuOpenId(null); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150"
+                          >
+                            <Share2 size={16} className={isShared ? 'text-emerald-500' : 'text-slate-400'} />
+                            分享
+                          </button>
+                        )}
+                        {data.lists.length > 1 && (
+                          <button
+                            onClick={(e) => { handleDeleteClick(list.id, e); setMenuOpenId(null); }}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-sm text-rose-500 active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
+                          >
+                            <Trash2 size={16} />
+                            刪除
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -529,6 +542,11 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
           onUnshare={handleUnshare}
           onClose={() => { setSharePanelListId(null); setSharePanelSharedId(null); }}
         />
+      )}
+
+      {/* Menu backdrop */}
+      {menuOpenId !== null && (
+        <div className="fixed inset-0 z-40" onClick={() => setMenuOpenId(null)} />
       )}
 
       {/* Confirm delete dialog */}
