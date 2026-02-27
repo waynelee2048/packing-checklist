@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2 } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2, Loader2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Icon from './Icon';
 import UndoToast from './UndoToast';
+import { useItemPhoto } from '../hooks/useItemPhoto';
 import { encodeEmail } from '../utils/data';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -134,7 +135,12 @@ export default function Checklist({
   const [confirmRemoveItem, setConfirmRemoveItem] = useState(null);
   const [undoToast, setUndoToast] = useState(null);
   const [disposableInput, setDisposableInput] = useState('');
+  const [disposablePhoto, setDisposablePhoto] = useState(null);
+  const [disposablePhotoPreview, setDisposablePhotoPreview] = useState(null);
   const [confirmDisposableDelete, setConfirmDisposableDelete] = useState(false);
+  const disposableFileRef = useRef(null);
+
+  const { uploadPhoto, deletePhoto, uploading: disposableUploading } = useItemPhoto(user);
 
   // Determine mode: 'shared-with-me', 'own-shared', or 'local'
   const isSharedWithMe = activeSharedListId && shared?.sharedWithMe?.[activeSharedListId];
@@ -369,9 +375,16 @@ export default function Checklist({
   };
 
   // Disposable: add inline item
-  const addDisposableItem = (name) => {
+  const addDisposableItem = async (name, photoFile) => {
     if (!safeList || !name.trim()) return;
-    const newItem = { id: 'd_' + Date.now(), name: name.trim() };
+    const itemId = 'd_' + Date.now();
+    let photoURL;
+    if (photoFile && user) {
+      try {
+        photoURL = await uploadPhoto(itemId, photoFile);
+      } catch { /* continue without photo */ }
+    }
+    const newItem = { id: itemId, name: name.trim(), ...(photoURL && { photoURL }) };
     const newData = {
       ...data,
       lists: data.lists.map(l =>
@@ -386,6 +399,8 @@ export default function Checklist({
   // Disposable: remove inline item
   const removeDisposableItem = (itemId) => {
     if (!safeList) return;
+    const item = (safeList.inlineItems || []).find(i => i.id === itemId);
+    if (item?.photoURL) deletePhoto(itemId);
     const newData = {
       ...data,
       lists: data.lists.map(l => {
@@ -768,7 +783,7 @@ export default function Checklist({
           {showQuickAdd && (
             <div
               className="fixed inset-0 bg-black/30 z-40"
-              onClick={() => { setShowQuickAdd(false); setQuickAddName(''); setDisposableInput(''); }}
+              onClick={() => { setShowQuickAdd(false); setQuickAddName(''); setDisposableInput(''); if (disposablePhotoPreview) URL.revokeObjectURL(disposablePhotoPreview); setDisposablePhoto(null); setDisposablePhotoPreview(null); }}
             />
           )}
           {showQuickAdd && (
@@ -778,30 +793,79 @@ export default function Checklist({
               </div>
               {isDisposable ? (
                 <>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="項目名稱"
+                      value={disposableInput}
+                      onChange={e => setDisposableInput(e.target.value)}
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter' && disposableInput.trim()) {
+                          await addDisposableItem(disposableInput, disposablePhoto);
+                          setDisposableInput('');
+                          if (disposablePhotoPreview) URL.revokeObjectURL(disposablePhotoPreview);
+                          setDisposablePhoto(null);
+                          setDisposablePhotoPreview(null);
+                        }
+                      }}
+                      className="w-full pl-3 pr-9 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    {user && (
+                      <button
+                        type="button"
+                        onClick={() => disposableFileRef.current?.click()}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 p-0.5 flex items-center justify-center"
+                        aria-label="拍照"
+                      >
+                        <Camera size={16} />
+                      </button>
+                    )}
+                  </div>
                   <input
-                    type="text"
-                    placeholder="項目名稱"
-                    value={disposableInput}
-                    onChange={e => setDisposableInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && disposableInput.trim()) {
-                        addDisposableItem(disposableInput);
-                        setDisposableInput('');
-                      }
+                    ref={disposableFileRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (disposablePhotoPreview) URL.revokeObjectURL(disposablePhotoPreview);
+                      setDisposablePhoto(file);
+                      setDisposablePhotoPreview(URL.createObjectURL(file));
+                      e.target.value = '';
                     }}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="hidden"
                   />
+                  {disposablePhotoPreview && (
+                    <div className="flex items-center gap-2">
+                      <img src={disposablePhotoPreview} alt="預覽" className="w-12 h-12 object-cover rounded-lg border border-slate-200 dark:border-slate-700" />
+                      <button
+                        onClick={() => {
+                          URL.revokeObjectURL(disposablePhotoPreview);
+                          setDisposablePhoto(null);
+                          setDisposablePhotoPreview(null);
+                        }}
+                        className="text-xs text-rose-500 px-2 py-1 border border-rose-200 dark:border-rose-800 rounded-lg"
+                      >
+                        移除
+                      </button>
+                    </div>
+                  )}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       if (disposableInput.trim()) {
-                        addDisposableItem(disposableInput);
+                        await addDisposableItem(disposableInput, disposablePhoto);
                         setDisposableInput('');
+                        if (disposablePhotoPreview) URL.revokeObjectURL(disposablePhotoPreview);
+                        setDisposablePhoto(null);
+                        setDisposablePhotoPreview(null);
                       }
                     }}
-                    disabled={!disposableInput.trim()}
-                    className="w-full py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150"
+                    disabled={!disposableInput.trim() || disposableUploading}
+                    className="w-full py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150 flex items-center justify-center gap-1.5"
                   >
-                    新增
+                    {disposableUploading && <Loader2 size={14} className="animate-spin" />}
+                    {disposableUploading ? '上傳中...' : '新增'}
                   </button>
                 </>
               ) : (
@@ -835,7 +899,7 @@ export default function Checklist({
             </div>
           )}
           <button
-            onClick={() => { setShowQuickAdd(v => !v); if (showQuickAdd) { setQuickAddName(''); setDisposableInput(''); } }}
+            onClick={() => { setShowQuickAdd(v => !v); if (showQuickAdd) { setQuickAddName(''); setDisposableInput(''); if (disposablePhotoPreview) URL.revokeObjectURL(disposablePhotoPreview); setDisposablePhoto(null); setDisposablePhotoPreview(null); } }}
             className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg flex items-center justify-center active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150"
             aria-label={showQuickAdd ? '關閉新增表單' : '新增項目'}
           >
