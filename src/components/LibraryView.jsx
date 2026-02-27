@@ -357,7 +357,7 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
-                  capture="environment"
+
                   onChange={handlePhotoSelect}
                   className="hidden"
                 />
