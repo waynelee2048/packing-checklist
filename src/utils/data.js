@@ -43,6 +43,17 @@ export function decodeEmail(encoded) {
   return encoded.replace(/,/g, '.');
 }
 
+// Strip undefined values from objects/arrays before writing to Firebase
+export function stripUndefined(val) {
+  if (Array.isArray(val)) return val.map(stripUndefined);
+  if (val !== null && typeof val === 'object') {
+    return Object.fromEntries(
+      Object.entries(val).filter(([, v]) => v !== undefined).map(([k, v]) => [k, stripUndefined(v)])
+    );
+  }
+  return val;
+}
+
 // Sanitize shared list data from Firebase
 export function sanitizeSharedList(sharedList) {
   if (!sharedList) return null;

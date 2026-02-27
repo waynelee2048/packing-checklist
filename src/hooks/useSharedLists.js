@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ref, set, get, onValue, update, remove, push } from 'firebase/database';
 import { db } from '../utils/firebase';
-import { encodeEmail, sanitizeSharedList } from '../utils/data';
+import { encodeEmail, sanitizeSharedList, stripUndefined } from '../utils/data';
 
 export function useSharedLists(user, data) {
   const [sharedWithMe, setSharedWithMe] = useState({});
@@ -160,7 +160,7 @@ export function useSharedLists(user, data) {
         if (changed) {
           const listRef = ref(db, `sharedLists/${list.sharedListId}`);
           update(listRef, {
-            items: inlineItems,
+            items: stripUndefined(inlineItems),
             name: list.name,
             icon: list.icon
           });
@@ -194,7 +194,7 @@ export function useSharedLists(user, data) {
       if (changed) {
         const listRef = ref(db, `sharedLists/${list.sharedListId}`);
         update(listRef, {
-          items: mergedItems,
+          items: stripUndefined(mergedItems),
           name: list.name,
           icon: list.icon
         });
@@ -230,7 +230,7 @@ export function useSharedLists(user, data) {
       ownerName: user.displayName || user.email,
       name: list.name,
       icon: list.icon,
-      items: embeddedItems,
+      items: stripUndefined(embeddedItems),
       checkedItems: Array.isArray(list.checkedItems) ? list.checkedItems : [],
       sharedWith
     };
@@ -292,7 +292,7 @@ export function useSharedLists(user, data) {
     const itemsRef = ref(db, `sharedLists/${sharedListId}/items`);
     const snapshot = await get(itemsRef);
     const currentItems = snapshot.val() || [];
-    const newItems = [...currentItems, item];
+    const newItems = [...currentItems, stripUndefined(item)];
     await set(itemsRef, newItems);
   }, []);
 
