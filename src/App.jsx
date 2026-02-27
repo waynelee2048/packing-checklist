@@ -112,10 +112,13 @@ function App() {
         )}
       </div>
       {showTabBar && (
-        <BottomTabBar
-          currentView={currentView === 'checklist' ? 'lists' : currentView}
-          onNavigate={(view) => navigate(view, { sharedListId: null })}
-        />
+        <>
+          <div className="flex-shrink-0" style={{ height: 'calc(4rem + env(safe-area-inset-bottom, 0px))' }} />
+          <BottomTabBar
+            currentView={currentView === 'checklist' ? 'lists' : currentView}
+            onNavigate={(view) => navigate(view, { sharedListId: null })}
+          />
+        </>
       )}
       {import.meta.env.DEV && <Agentation />}
     </div>
