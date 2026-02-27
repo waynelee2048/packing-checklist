@@ -35,80 +35,82 @@ function App() {
   const showTabBar = currentView !== 'addItems' && currentView !== 'admin';
 
   return (
-    <>
-      {currentView === 'checklist' && (
-        <Checklist
-          data={data}
-          user={user}
-          syncStatus={syncStatus}
-          onLogin={handleLogin}
-          onLogout={handleLogout}
-          onNavigate={navigate}
-          onSaveData={saveData}
-          shared={shared}
-          activeSharedListId={activeSharedListId}
-          categories={categories}
-        />
-      )}
-      {currentView === 'lists' && (
-        <ListsView
-          data={data}
-          user={user}
-          onNavigate={navigate}
-          onSaveData={saveData}
-          shared={shared}
-        />
-      )}
-      {currentView === 'library' && (
-        <LibraryView
-          data={data}
-          user={user}
-          onNavigate={navigate}
-          onSaveData={saveData}
-          categories={categories}
-          onAddCategory={addCategory}
-          onUpdateCategory={updateCategory}
-          onRemoveCategory={removeCategory}
-        />
-      )}
-      {currentView === 'addItems' && (
-        <AddItemsView
-          data={data}
-          onNavigate={navigate}
-          onSaveData={saveData}
-          categories={categories}
-        />
-      )}
-      {currentView === 'profile' && (
-        <ProfileView
-          user={user}
-          syncStatus={syncStatus}
-          onLogin={handleLogin}
-          onLogout={handleLogout}
-          onNavigate={navigate}
-          isAdmin={admin.isAdmin}
-          themePreference={themePreference}
-          onThemeChange={onThemeChange}
-        />
-      )}
-      {currentView === 'admin' && admin.isAdmin && (
-        <AdminView
-          data={data}
-          user={user}
-          shared={shared}
-          onNavigate={navigate}
-          onSaveData={saveData}
-          admin={admin}
-          categories={categories}
-          categoryActions={{ addCategory, updateCategory, removeCategory }}
-        />
-      )}
-      {currentView === 'admin' && !admin.isAdmin && !admin.loading && (
-        <div className="flex flex-col items-center justify-center h-full p-4">
-          <p className="text-slate-500 dark:text-slate-400 mb-4">你沒有管理後台的存取權限</p>
-          <button onClick={() => navigate('profile')} className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg">返回設定</button>
-        </div>
-      )}
+    <div className="flex flex-col h-full">
+      <div className="flex-1 min-h-0">
+        {currentView === 'checklist' && (
+          <Checklist
+            data={data}
+            user={user}
+            syncStatus={syncStatus}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onNavigate={navigate}
+            onSaveData={saveData}
+            shared={shared}
+            activeSharedListId={activeSharedListId}
+            categories={categories}
+          />
+        )}
+        {currentView === 'lists' && (
+          <ListsView
+            data={data}
+            user={user}
+            onNavigate={navigate}
+            onSaveData={saveData}
+            shared={shared}
+          />
+        )}
+        {currentView === 'library' && (
+          <LibraryView
+            data={data}
+            user={user}
+            onNavigate={navigate}
+            onSaveData={saveData}
+            categories={categories}
+            onAddCategory={addCategory}
+            onUpdateCategory={updateCategory}
+            onRemoveCategory={removeCategory}
+          />
+        )}
+        {currentView === 'addItems' && (
+          <AddItemsView
+            data={data}
+            onNavigate={navigate}
+            onSaveData={saveData}
+            categories={categories}
+          />
+        )}
+        {currentView === 'profile' && (
+          <ProfileView
+            user={user}
+            syncStatus={syncStatus}
+            onLogin={handleLogin}
+            onLogout={handleLogout}
+            onNavigate={navigate}
+            isAdmin={admin.isAdmin}
+            themePreference={themePreference}
+            onThemeChange={onThemeChange}
+          />
+        )}
+        {currentView === 'admin' && admin.isAdmin && (
+          <AdminView
+            data={data}
+            user={user}
+            shared={shared}
+            onNavigate={navigate}
+            onSaveData={saveData}
+            admin={admin}
+            categories={categories}
+            categoryActions={{ addCategory, updateCategory, removeCategory }}
+          />
+        )}
+        {currentView === 'admin' && !admin.isAdmin && !admin.loading && (
+          <div className="flex flex-col items-center justify-center h-full p-4">
+            <p className="text-slate-500 dark:text-slate-400 mb-4">你沒有管理後台的存取權限</p>
+            <button onClick={() => navigate('profile')} className="px-4 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg">返回設定</button>
+          </div>
+        )}
+      </div>
       {showTabBar && (
         <BottomTabBar
           currentView={currentView === 'checklist' ? 'lists' : currentView}
@@ -116,7 +118,7 @@ function App() {
         />
       )}
       {import.meta.env.DEV && <Agentation />}
-    </>
+    </div>
   );
 }
 

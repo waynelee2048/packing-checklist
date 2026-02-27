@@ -300,7 +300,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
   );
 
   return (
-    <div className="flex flex-col h-full pb-tabbar">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
         <div className="flex items-center justify-between">
@@ -323,7 +323,7 @@ export default function ListsView({ data, user, onNavigate, onSaveData, shared }
       </div>
 
       {/* Lists */}
-      <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 no-scrollbar">
         {/* Search bar */}
         <div className="mb-4">
           <div className="relative">

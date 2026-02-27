@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2, Send } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2 } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -572,7 +572,7 @@ export default function Checklist({
   };
 
   return (
-    <div className="flex flex-col h-full pb-tabbar">
+    <div className="flex flex-col h-full">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
         <div className="flex items-center justify-between">
@@ -647,7 +647,7 @@ export default function Checklist({
             <Inbox size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
             <div className="text-lg mb-2">清單是空的</div>
             {isDisposable ? (
-              <div className="text-sm">在下方輸入框新增項目</div>
+              <div className="text-sm">點右下角按鈕新增項目</div>
             ) : mode !== 'shared-with-me' ? (
               <button
                 onClick={() => onNavigate('addItems')}
@@ -762,48 +762,82 @@ export default function Checklist({
         />
       )}
 
-      {/* Quick add FAB — shown when canEdit, hidden for disposable */}
-      {canEdit && !isDisposable && (
+      {/* Quick add FAB */}
+      {canEdit && (
         <>
           {showQuickAdd && (
             <div
               className="fixed inset-0 bg-black/30 z-40"
-              onClick={() => { setShowQuickAdd(false); setQuickAddName(''); }}
+              onClick={() => { setShowQuickAdd(false); setQuickAddName(''); setDisposableInput(''); }}
             />
           )}
           {showQuickAdd && (
             <div className="fixed right-4 bottom-24 z-50 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">快速新增物品</div>
-              <input
-                type="text"
-                placeholder="物品名稱"
-                value={quickAddName}
-                onChange={e => setQuickAddName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); }}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <select
-                value={quickAddCategory}
-                onChange={e => setQuickAddCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <button
-                onClick={handleQuickAdd}
-                disabled={!quickAddName.trim()}
-                className="w-full py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150"
-              >
-                新增並加入清單
-              </button>
+              <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {isDisposable ? '新增項目' : '快速新增物品'}
+              </div>
+              {isDisposable ? (
+                <>
+                  <input
+                    type="text"
+                    placeholder="項目名稱"
+                    value={disposableInput}
+                    onChange={e => setDisposableInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && disposableInput.trim()) {
+                        addDisposableItem(disposableInput);
+                        setDisposableInput('');
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={() => {
+                      if (disposableInput.trim()) {
+                        addDisposableItem(disposableInput);
+                        setDisposableInput('');
+                      }
+                    }}
+                    disabled={!disposableInput.trim()}
+                    className="w-full py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150"
+                  >
+                    新增
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    placeholder="物品名稱"
+                    value={quickAddName}
+                    onChange={e => setQuickAddName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); }}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <select
+                    value={quickAddCategory}
+                    onChange={e => setQuickAddCategory(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleQuickAdd}
+                    disabled={!quickAddName.trim()}
+                    className="w-full py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg text-sm font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150"
+                  >
+                    新增並加入清單
+                  </button>
+                </>
+              )}
             </div>
           )}
           <button
-            onClick={() => { setShowQuickAdd(v => !v); if (showQuickAdd) setQuickAddName(''); }}
+            onClick={() => { setShowQuickAdd(v => !v); if (showQuickAdd) { setQuickAddName(''); setDisposableInput(''); } }}
             className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white shadow-lg flex items-center justify-center active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150"
-            aria-label={showQuickAdd ? '關閉新增表單' : '快速新增物品'}
+            aria-label={showQuickAdd ? '關閉新增表單' : '新增項目'}
           >
             {showQuickAdd ? <X size={24} /> : <Plus size={24} />}
           </button>
@@ -816,40 +850,6 @@ export default function Checklist({
           onUndo={() => { toggleItemCheck(undoToast.itemId, true); setUndoToast(null); }}
           onDismiss={() => setUndoToast(null)}
         />
-      )}
-
-      {/* Disposable: bottom input bar */}
-      {isDisposable && mode !== 'shared-with-me' && (
-        <div className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 safe-bottom">
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={disposableInput}
-              onChange={e => setDisposableInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && disposableInput.trim()) {
-                  addDisposableItem(disposableInput);
-                  setDisposableInput('');
-                }
-              }}
-              placeholder="新增項目..."
-              className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-            />
-            <button
-              onClick={() => {
-                if (disposableInput.trim()) {
-                  addDisposableItem(disposableInput);
-                  setDisposableInput('');
-                }
-              }}
-              disabled={!disposableInput.trim()}
-              className="px-4 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 disabled:opacity-40 transition-colors duration-150 min-h-[44px] flex items-center justify-center"
-              aria-label="新增"
-            >
-              <Send size={18} />
-            </button>
-          </div>
-        </div>
       )}
 
       {/* Disposable: completion delete dialog */}

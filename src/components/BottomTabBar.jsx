@@ -8,7 +8,7 @@ const tabs = [
 
 export default function BottomTabBar({ currentView, onNavigate }) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 z-40 safe-bottom">
+    <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 safe-bottom">
       <div className="flex">
         {tabs.map(tab => {
           const isActive = currentView === tab.id;
