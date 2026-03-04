@@ -67,9 +67,6 @@ function App() {
             onNavigate={navigate}
             onSaveData={saveData}
             categories={categories}
-            onAddCategory={addCategory}
-            onUpdateCategory={updateCategory}
-            onRemoveCategory={removeCategory}
           />
         )}
         {currentView === 'addItems' && (

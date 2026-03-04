@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { X, Camera, Loader2, Plus, Edit3, Trash2, Check, MoreVertical, ScanLine } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Camera, Loader2, Plus, Search, ChevronDown, Check, ScanLine, MapPin, StickyNote } from 'lucide-react';
 import { useItemPhoto } from '../hooks/useItemPhoto';
 
 function ConfirmDialog({ message, onConfirm, onCancel }) {
@@ -32,101 +32,61 @@ function ConfirmDialog({ message, onConfirm, onCancel }) {
   );
 }
 
-export default function LibraryView({ data, user, onNavigate, onSaveData, categories = [], onAddCategory, onUpdateCategory, onRemoveCategory }) {
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState(categories[0] || '');
-  const [newItemNote, setNewItemNote] = useState('');
-  const [newItemPhoto, setNewItemPhoto] = useState(null);
-  const [newItemPhotoPreview, setNewItemPhotoPreview] = useState(null);
+export default function LibraryView({ data, user, onNavigate, onSaveData, categories = [] }) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [editingItemId, setEditingItemId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [adding, setAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showCategoryManager, setShowCategoryManager] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [editingCatIndex, setEditingCatIndex] = useState(null);
-  const [editCatName, setEditCatName] = useState('');
-  const [activeCategory, setActiveCategory] = useState('全部');
-  const [menuOpenItemId, setMenuOpenItemId] = useState(null);
-  const fileInputRef = useRef(null);
+  const [showSpaceSwitcher, setShowSpaceSwitcher] = useState(false);
 
-  const { uploadPhoto, deletePhoto, uploading } = useItemPhoto(user);
+  const spaces = data.spaces || [{ id: 'space_default', name: '個人空間' }];
+  const activeSpaceId = data.activeSpaceId || spaces[0]?.id;
+  const activeSpace = spaces.find(s => s.id === activeSpaceId) || spaces[0];
 
-  // Group items by category
-  const groupedItems = {};
-  categories.forEach(cat => { groupedItems[cat] = []; });
-  (data.itemLibrary || []).forEach(item => {
-    if (groupedItems[item.category]) {
-      groupedItems[item.category].push(item);
-    }
-  });
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const handlePhotoSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setNewItemPhoto(file);
-    setNewItemPhotoPreview(URL.createObjectURL(file));
-    e.target.value = '';
+  // Filter items by active space
+  const spaceItems = (data.itemLibrary || []).filter(item => item.spaceId === activeSpaceId);
+
+  // Filter by search query
+  const filteredItems = debouncedQuery
+    ? spaceItems.filter(item => {
+        const q = debouncedQuery.toLowerCase();
+        return item.name?.toLowerCase().includes(q) || item.note?.toLowerCase().includes(q);
+      })
+    : spaceItems;
+
+  const switchSpace = (spaceId) => {
+    onSaveData({ ...data, activeSpaceId: spaceId });
+    setShowSpaceSwitcher(false);
   };
 
-  const removeNewPhoto = () => {
-    if (newItemPhotoPreview) URL.revokeObjectURL(newItemPhotoPreview);
-    setNewItemPhoto(null);
-    setNewItemPhotoPreview(null);
+  const addNewSpace = () => {
+    const name = prompt('輸入新空間名稱');
+    if (!name?.trim()) return;
+    const newSpace = { id: 'space_' + Date.now(), name: name.trim() };
+    onSaveData({ ...data, spaces: [...spaces, newSpace] });
   };
 
-  const addItemToLibrary = async () => {
-    if (!newItemName.trim()) return;
-    setAdding(true);
+  const editingItem = editingItemId ? data.itemLibrary.find(i => i.id === editingItemId) : null;
 
-    const itemId = Date.now();
-    let photoURL = undefined;
-
-    if (newItemPhoto && user) {
-      try {
-        photoURL = await uploadPhoto(itemId, newItemPhoto);
-      } catch {
-        // Photo upload failed — still create item without photo
-      }
-    }
-
-    const newItem = {
-      id: itemId,
-      name: newItemName.trim(),
-      category: newItemCategory,
-      note: newItemNote.trim(),
-      ...(photoURL && { photoURL })
-    };
-
-    const newData = {
-      ...data,
-      itemLibrary: [...data.itemLibrary, newItem]
-    };
-
-    onSaveData(newData);
-    setNewItemName('');
-    setNewItemNote('');
-    removeNewPhoto();
-    setAdding(false);
-    setShowAddForm(false);
-  };
-
-  const updateItem = async (itemId, name, category, note, photoURL) => {
+  const updateItem = (itemId, updates) => {
     const newData = {
       ...data,
       itemLibrary: data.itemLibrary.map(item =>
-        item.id === itemId ? { ...item, name, category, note, ...(photoURL ? { photoURL } : { photoURL: null }) } : item
+        item.id === itemId ? { ...item, ...updates } : item
       )
     };
     onSaveData(newData);
     setEditingItemId(null);
   };
 
-  const deleteItemFromLibrary = async (itemId) => {
-    const item = data.itemLibrary.find(i => i.id === itemId);
-    if (item?.photoURL) {
-      deletePhoto(itemId);
-    }
+  const deleteItemFromLibrary = (itemId) => {
     const newData = {
       ...data,
       itemLibrary: data.itemLibrary.filter(item => item.id !== itemId),
@@ -140,114 +100,93 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
     setConfirmDeleteId(null);
   };
 
-  const editingItem = editingItemId ? data.itemLibrary.find(i => i.id === editingItemId) : null;
-
-  // Determine which categories to render based on active filter
-  const visibleCategories = activeCategory === '全部' ? categories : categories.filter(c => c === activeCategory);
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-50 px-4 py-3 border-b border-slate-200 dark:border-slate-700 safe-top">
-        <div className="flex items-center justify-between">
-          <div className="w-10" />
-          <div className="text-lg font-bold text-center">物品庫</div>
-          <div className="w-10" />
+        <div className="flex flex-col">
+          <div className="text-lg font-bold">物品庫</div>
+          <button
+            onClick={() => setShowSpaceSwitcher(true)}
+            className="flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 mt-0.5"
+          >
+            {activeSpace.name}
+            <ChevronDown size={14} />
+          </button>
         </div>
       </div>
 
-      {/* Category filter chips — US-001 */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-4 py-2 overflow-x-auto no-scrollbar">
-        <div className="flex gap-2 w-max">
-          {['全部', ...categories].map(cat => (
+      {/* Search bar */}
+      <div className="bg-white dark:bg-slate-900 px-4 py-2 border-b border-slate-200 dark:border-slate-700">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={`搜尋 ${spaceItems.length} 項物品`}
+            className="w-full pl-9 pr-8 py-2.5 text-sm bg-slate-100 dark:bg-slate-800 rounded-full text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-150"
+          />
+          {searchQuery && (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
-                activeCategory === cat
-                  ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
-                  : 'border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300'
-              }`}
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 p-1 min-w-[28px] min-h-[28px] flex items-center justify-center"
+              aria-label="清除搜尋"
             >
-              {cat}
+              <X size={16} />
             </button>
-          ))}
+          )}
         </div>
       </div>
 
-      {/* Items list */}
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-4 no-scrollbar">
-        {visibleCategories.map(category => {
-          const items = groupedItems[category] || [];
-          if (items.length === 0) return null;
-
-          return (
-            <div key={category} className="mb-4">
-              <div className="text-sm text-indigo-600 dark:text-indigo-400 font-semibold mb-2">{category}</div>
-              <div className="space-y-2">
-                {items.map(item => (
-                  <div key={item.id} className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between min-h-[36px]">
-                      {/* US-002: note as pill tag inline with name */}
-                      <div className="flex items-center gap-2 min-w-0 flex-1 flex-wrap">
-                        {item.photoURL && (
-                          <img
-                            src={item.photoURL}
-                            alt=""
-                            className="w-10 h-10 object-cover rounded-lg flex-shrink-0"
-                            loading="lazy"
-                            onError={(e) => { e.target.style.display = 'none'; }}
-                          />
-                        )}
-                        <span className="font-medium text-slate-800 dark:text-slate-100">{item.name}</span>
-                        {item.note && (
-                          <span className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
-                            {item.note}
-                          </span>
-                        )}
-                      </div>
-                      {/* US-002: three-dot menu */}
-                      <div className="relative flex-shrink-0 ml-2">
-                        <button
-                          onClick={() => setMenuOpenItemId(menuOpenItemId === item.id ? null : item.id)}
-                          className="p-1.5 text-slate-400 rounded-lg active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                          aria-label="更多選項"
-                        >
-                          <MoreVertical size={18} />
-                        </button>
-                        {menuOpenItemId === item.id && (
-                          <div className="absolute right-0 top-full mt-1 w-28 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 z-50 overflow-hidden">
-                            <button
-                              onClick={() => { setEditingItemId(item.id); setMenuOpenItemId(null); }}
-                              className="w-full text-left px-4 py-2.5 text-sm text-slate-700 dark:text-slate-200 active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150"
-                            >
-                              編輯
-                            </button>
-                            <button
-                              onClick={() => { setConfirmDeleteId(item.id); setMenuOpenItemId(null); }}
-                              className="w-full text-left px-4 py-2.5 text-sm text-rose-500 active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
-                            >
-                              刪除
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+      {/* Items list — flat, separated by dividers */}
+      <div className="flex-1 overflow-y-auto no-scrollbar">
+        {filteredItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-400 dark:text-slate-500">
+            <Search size={40} className="mb-3 opacity-50" />
+            <p className="text-sm">{debouncedQuery ? '找不到符合的物品' : '尚未新增任何物品'}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {filteredItems.map(item => (
+              <div
+                key={item.id}
+                onClick={() => setEditingItemId(item.id)}
+                className="flex items-center px-4 py-3 active:bg-slate-50 dark:active:bg-slate-800 cursor-pointer transition-colors duration-150"
+              >
+                {/* Left: name + location pill (inline) */}
+                <div className="flex-1 min-w-0 mr-3 flex items-center gap-2">
+                  <span className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+                    {item.name}
+                  </span>
+                  {item.location && (
+                    <span className="flex-shrink-0 text-xs bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
+                      {item.location}
+                    </span>
+                  )}
+                </div>
+                {/* Right: photo thumbnail (only if uploaded) */}
+                {item.photoURL && (
+                  <div
+                    className="w-12 h-12 rounded-lg flex-shrink-0 overflow-hidden"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(item.photoURL, '_blank');
+                    }}
+                  >
+                    <img
+                      src={item.photoURL}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        )}
       </div>
-
-      {/* Backdrop to close dropdown menu — US-002 */}
-      {menuOpenItemId !== null && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setMenuOpenItemId(null)}
-        />
-      )}
 
       {/* FAB */}
       <button
@@ -260,135 +199,15 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
 
       {/* Add item bottom sheet */}
       {showAddForm && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
-          onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); }}
-        >
-          <div
-            className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-lg font-bold text-slate-900 dark:text-slate-50">新增物品</div>
-              <button
-                onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); }}
-                className="p-1 rounded-lg active:bg-slate-100 dark:active:bg-slate-700"
-              >
-                <X size={20} className="text-slate-400" />
-              </button>
-            </div>
-
-            {/* US-004: 物品名稱 with ScanLine + Camera icons */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">物品名稱</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="輸入完整以利搜尋"
-                  className="w-full pl-4 pr-20 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => alert('掃描功能即將推出')}
-                    className="text-slate-400 p-0.5 flex items-center justify-center"
-                    aria-label="掃描"
-                  >
-                    <ScanLine size={18} />
-                  </button>
-                  <span className="text-slate-300 dark:text-slate-600 select-none">|</span>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-slate-400 p-0.5 flex items-center justify-center"
-                    aria-label="拍照"
-                  >
-                    <Camera size={18} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* US-003: 類別 chip buttons */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">類別（選填）</label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setNewItemCategory(cat)}
-                    className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
-                      newItemCategory === cat
-                        ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
-                        : 'border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => { setShowAddForm(false); setNewItemName(''); setNewItemNote(''); removeNewPhoto(); setShowCategoryManager(true); }}
-                  className="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 transition-colors duration-150"
-                >
-                  ⚙ 設定
-                </button>
-              </div>
-            </div>
-
-            {/* 備註 field */}
-            <div className="mb-4">
-              <input
-                type="text"
-                value={newItemNote}
-                onChange={(e) => setNewItemNote(e.target.value)}
-                placeholder="備註（選填）：存放位置、提醒事項..."
-                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-              />
-            </div>
-
-            {/* Photo section — hidden input + preview only (no separate button) */}
-            {user && (
-              <div className="mb-4">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-
-                  onChange={handlePhotoSelect}
-                  className="hidden"
-                />
-                {newItemPhotoPreview && (
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={newItemPhotoPreview}
-                      alt="預覽"
-                      className="w-20 h-20 object-cover rounded-lg border border-slate-200 dark:border-slate-700"
-                    />
-                    <button
-                      onClick={removeNewPhoto}
-                      className="text-sm text-rose-500 px-3 py-1.5 border border-rose-200 dark:border-rose-800 rounded-lg active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
-                    >
-                      移除照片
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={addItemToLibrary}
-              disabled={adding || uploading}
-              className="w-full py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px] disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {(adding || uploading) && <Loader2 size={18} className="animate-spin" />}
-              {(adding || uploading) ? '新增中...' : '+ 新增物品'}
-            </button>
-          </div>
-        </div>
+        <AddItemSheet
+          data={data}
+          user={user}
+          spaces={spaces}
+          activeSpaceId={activeSpaceId}
+          categories={categories}
+          onSaveData={onSaveData}
+          onClose={() => setShowAddForm(false)}
+        />
       )}
 
       {/* Edit modal */}
@@ -396,11 +215,11 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
         <EditItemModal
           item={editingItem}
           user={user}
-          categories={categories}
+          data={data}
+          spaces={spaces}
           onSave={updateItem}
+          onDelete={(id) => { setEditingItemId(null); setConfirmDeleteId(id); }}
           onClose={() => setEditingItemId(null)}
-          uploadPhoto={uploadPhoto}
-          deletePhoto={deletePhoto}
         />
       )}
 
@@ -413,93 +232,42 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
         />
       )}
 
-      {/* Category manager bottom sheet */}
-      {showCategoryManager && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+      {/* Space switcher bottom sheet */}
+      {showSpaceSwitcher && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
+          onClick={() => setShowSpaceSwitcher(false)}
+        >
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
-            onClick={() => { setShowCategoryManager(false); setNewCatName(''); setEditingCatIndex(null); }}
-          />
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-800 rounded-t-2xl animate-slide-up safe-bottom">
+            className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl safe-bottom animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-4">
               <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-4" />
-              <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">管理分類</div>
-
-              <div className="max-h-64 overflow-y-auto mb-4 space-y-1">
-                {categories.map((cat, index) => (
-                  <div key={cat} className="flex items-center justify-between px-3 py-2.5 bg-slate-50 dark:bg-slate-700 rounded-xl">
-                    {editingCatIndex === index ? (
-                      <div className="flex items-center gap-2 flex-1">
-                        <input
-                          value={editCatName}
-                          onChange={e => setEditCatName(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') { onUpdateCategory(cat, editCatName); setEditingCatIndex(null); }
-                            if (e.key === 'Escape') setEditingCatIndex(null);
-                          }}
-                          className="flex-1 px-2 py-1 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                        <button
-                          onClick={() => { onUpdateCategory(cat, editCatName); setEditingCatIndex(null); }}
-                          className="p-1.5 text-emerald-600 active:bg-emerald-50 dark:active:bg-emerald-900/30 rounded-lg"
-                        >
-                          <Check size={16} />
-                        </button>
-                        <button
-                          onClick={() => setEditingCatIndex(null)}
-                          className="p-1.5 text-slate-400 active:bg-slate-100 dark:active:bg-slate-600 rounded-lg"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat}</span>
-                        <div className="flex gap-0.5">
-                          <button
-                            onClick={() => { setEditingCatIndex(index); setEditCatName(cat); }}
-                            className="p-1.5 text-slate-400 active:text-indigo-600 rounded-lg min-w-[32px] min-h-[32px] flex items-center justify-center"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          {categories.length > 1 && (
-                            <button
-                              onClick={() => { if (confirm(`確定刪除分類「${cat}」？`)) onRemoveCategory(cat); }}
-                              className="p-1.5 text-slate-400 active:text-rose-500 rounded-lg min-w-[32px] min-h-[32px] flex items-center justify-center"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
+              <div className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4 text-center">切換</div>
+              <div className="space-y-1 mb-4">
+                {spaces.map(space => (
+                  <button
+                    key={space.id}
+                    onClick={() => switchSpace(space.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150"
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-150 ${
+                      space.id === activeSpaceId
+                        ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-600 dark:bg-indigo-400'
+                        : 'border-slate-300 dark:border-slate-500'
+                    }`}>
+                      {space.id === activeSpaceId && <Check size={12} className="text-white" />}
+                    </div>
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{space.name}</span>
+                  </button>
                 ))}
               </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newCatName}
-                  onChange={e => setNewCatName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && newCatName.trim()) { onAddCategory(newCatName); setNewCatName(''); } }}
-                  placeholder="新增分類..."
-                  className="flex-1 px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
-                />
-                <button
-                  onClick={() => { if (newCatName.trim()) { onAddCategory(newCatName); setNewCatName(''); } }}
-                  disabled={!newCatName.trim()}
-                  className="px-5 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px] disabled:opacity-40"
-                >
-                  新增
-                </button>
-              </div>
-
               <button
-                onClick={() => { setShowCategoryManager(false); setNewCatName(''); setEditingCatIndex(null); }}
-                className="w-full mt-3 py-3 text-slate-500 dark:text-slate-400 font-medium min-h-[44px]"
+                onClick={addNewSpace}
+                className="w-full py-3 text-sm text-indigo-600 dark:text-indigo-400 font-medium active:opacity-70 transition-opacity"
               >
-                關閉
+                + 新增其他空間
               </button>
             </div>
           </div>
@@ -509,16 +277,256 @@ export default function LibraryView({ data, user, onNavigate, onSaveData, catego
   );
 }
 
-function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, deletePhoto }) {
+function AddItemSheet({ data, user, spaces, activeSpaceId, categories, onSaveData, onClose }) {
+  const [name, setName] = useState('');
+  const [selectedSpaceId, setSelectedSpaceId] = useState(activeSpaceId);
+  const [location, setLocation] = useState('');
+  const [note, setNote] = useState('');
+  const [showLocation, setShowLocation] = useState(false);
+  const [showNote, setShowNote] = useState(false);
+  const [photo, setPhoto] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const fileInputRef = useRef(null);
+  const { uploadPhoto, uploading } = useItemPhoto(user);
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhoto(file);
+    setPhotoPreview(URL.createObjectURL(file));
+    e.target.value = '';
+  };
+
+  const removePhoto = () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhoto(null);
+    setPhotoPreview(null);
+  };
+
+  const handleClose = () => {
+    removePhoto();
+    onClose();
+  };
+
+  const handleAdd = async () => {
+    if (!name.trim()) return;
+    setAdding(true);
+
+    const itemId = Date.now();
+    let photoURL = undefined;
+
+    if (photo && user) {
+      try {
+        photoURL = await uploadPhoto(itemId, photo);
+      } catch {
+        // Photo upload failed — still create item without photo
+      }
+    }
+
+    const newItem = {
+      id: itemId,
+      name: name.trim(),
+      category: categories[0] || '其他',
+      note: note.trim(),
+      location: location.trim(),
+      spaceId: selectedSpaceId,
+      ...(photoURL && { photoURL })
+    };
+
+    onSaveData({
+      ...data,
+      itemLibrary: [...data.itemLibrary, newItem]
+    });
+
+    setAdding(false);
+    handleClose();
+  };
+
+  const canAdd = name.trim().length > 0;
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
+      onClick={handleClose}
+    >
+      <div
+        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Title centered, no close button */}
+        <div className="text-lg font-bold text-slate-900 dark:text-slate-50 text-center mb-4">新增物品</div>
+
+        {/* Hidden file input */}
+        {user && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelect}
+            className="hidden"
+          />
+        )}
+
+        {/* Name field + photo thumbnail inline */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">物品名稱</label>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="輸入完整以利搜尋"
+                className="w-full pl-4 pr-12 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => alert('掃描功能即將推出')}
+                  className="text-slate-400 p-0.5 flex items-center justify-center"
+                  aria-label="掃描"
+                >
+                  <ScanLine size={18} />
+                </button>
+                {!photoPreview && user && (
+                  <>
+                    <span className="text-slate-300 dark:text-slate-600 select-none">|</span>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-slate-400 p-0.5 flex items-center justify-center"
+                      aria-label="拍照"
+                    >
+                      <Camera size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            {/* Photo circle thumbnail with red X overlay */}
+            {photoPreview && (
+              <div className="relative flex-shrink-0">
+                <img
+                  src={photoPreview}
+                  alt="預覽"
+                  className="w-11 h-11 object-cover rounded-full"
+                />
+                <button
+                  onClick={removePhoto}
+                  className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center"
+                  aria-label="移除照片"
+                >
+                  <X size={12} className="text-white" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Space selection (radio circle style) */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">空間</label>
+          <div className="space-y-2">
+            {spaces.map(space => (
+              <button
+                key={space.id}
+                type="button"
+                onClick={() => setSelectedSpaceId(space.id)}
+                className="w-full flex items-center gap-3 py-1"
+              >
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors duration-150 ${
+                  selectedSpaceId === space.id
+                    ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-600 dark:bg-indigo-400'
+                    : 'border-slate-300 dark:border-slate-500'
+                }`}>
+                  {selectedSpaceId === space.id && <Check size={12} className="text-white" />}
+                </div>
+                <span className="text-sm text-slate-700 dark:text-slate-300">{space.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Expandable fields: pill buttons → textareas */}
+        <div className="mb-4 space-y-3">
+          {(!showLocation || !showNote) && (
+            <div className="flex gap-3">
+              {!showLocation && (
+                <button
+                  onClick={() => setShowLocation(true)}
+                  className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 py-1.5 px-3 border border-slate-200 dark:border-slate-600 rounded-full"
+                >
+                  <MapPin size={14} />
+                  + 存放位置
+                </button>
+              )}
+              {!showNote && (
+                <button
+                  onClick={() => setShowNote(true)}
+                  className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400 py-1.5 px-3 border border-slate-200 dark:border-slate-600 rounded-full"
+                >
+                  <StickyNote size={14} />
+                  + 備註
+                </button>
+              )}
+            </div>
+          )}
+          {showLocation && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">存放位置</label>
+              <textarea
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                rows={2}
+                autoFocus
+                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150 resize-none"
+              />
+            </div>
+          )}
+          {showNote && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">備註</label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                autoFocus={!showLocation}
+                className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150 resize-none"
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 新增 button — full-width rounded-full */}
+        <button
+          onClick={handleAdd}
+          disabled={!canAdd || adding || uploading}
+          className={`w-full py-3 rounded-full font-medium min-h-[44px] flex items-center justify-center gap-2 transition-colors duration-150 ${
+            canAdd
+              ? 'bg-indigo-600 dark:bg-indigo-500 text-white active:bg-indigo-700 dark:active:bg-indigo-600'
+              : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
+          } disabled:opacity-50`}
+        >
+          {(adding || uploading) && <Loader2 size={18} className="animate-spin" />}
+          {(adding || uploading) ? '新增中...' : '新增'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditItemModal({ item, user, data, spaces, onSave, onDelete, onClose }) {
   const [name, setName] = useState(item.name);
-  const [category, setCategory] = useState(item.category);
   const [note, setNote] = useState(item.note || '');
+  const [location, setLocation] = useState(item.location || '');
   const [photoURL, setPhotoURL] = useState(item.photoURL || '');
   const [newPhoto, setNewPhoto] = useState(null);
   const [newPhotoPreview, setNewPhotoPreview] = useState(null);
   const [photoRemoved, setPhotoRemoved] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileInputRef = useRef(null);
+  const { uploadPhoto, deletePhoto } = useItemPhoto(user);
 
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
@@ -556,7 +564,12 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
       }
     }
 
-    onSave(item.id, name, category, note, finalPhotoURL);
+    onSave(item.id, {
+      name,
+      note,
+      location,
+      ...(finalPhotoURL ? { photoURL: finalPhotoURL } : { photoURL: null })
+    });
     setSaving(false);
   };
 
@@ -568,45 +581,41 @@ function EditItemModal({ item, user, categories, onSave, onClose, uploadPhoto, d
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom"
+        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-lg font-bold mb-4 text-slate-900 dark:text-slate-50">編輯物品</div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-50">編輯物品</div>
+          <button
+            onClick={() => onDelete(item.id)}
+            className="text-sm text-rose-500 px-3 py-1.5 rounded-lg active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
+          >
+            刪除
+          </button>
+        </div>
 
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-4 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+          placeholder="物品名稱"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
 
-        {/* Category chips instead of select */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">類別</label>
-          <div className="flex flex-wrap gap-2">
-            {categories.map(cat => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setCategory(cat)}
-                className={`px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap transition-colors duration-150 ${
-                  category === cat
-                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white'
-                    : 'border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
+        <input
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="存放位置（選填）"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+        />
 
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="備註（選填）"
-          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-4 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
 
         {/* Photo section */}

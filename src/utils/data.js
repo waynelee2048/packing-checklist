@@ -12,26 +12,31 @@ export const iconOptions = [
 
 export const defaultData = {
   itemLibrary: [
-    { id: 1, name: '錢包', category: '必備', note: '放在玄關抽屜' },
-    { id: 2, name: '鑰匙', category: '必備', note: '大門+機車' },
-    { id: 3, name: '手機', category: '必備', note: '' },
-    { id: 4, name: '悠遊卡', category: '必備', note: '記得加值' },
-    { id: 5, name: '耳機', category: '電子產品', note: '充電盒在書桌' },
-    { id: 6, name: '行動電源', category: '電子產品', note: '出門前確認電量' },
-    { id: 7, name: '充電線', category: '電子產品', note: 'Type-C' },
-    { id: 8, name: '口罩', category: '個人物品', note: '備用放包包內袋' },
-    { id: 9, name: '面紙', category: '個人物品', note: '' },
-    { id: 10, name: '水壺', category: '個人物品', note: '裝滿水' },
-    { id: 11, name: '雨傘', category: '視天氣', note: '摺疊傘在門口' },
-    { id: 12, name: '護照', category: '旅行', note: '效期到 2027/05' },
-    { id: 13, name: '換洗衣物', category: '旅行', note: '依天數準備' },
+    { id: 1, name: '錢包', category: '必備', note: '', location: '玄關抽屜', spaceId: 'space_default' },
+    { id: 2, name: '鑰匙', category: '必備', note: '大門+機車', location: '', spaceId: 'space_default' },
+    { id: 3, name: '手機', category: '必備', note: '', location: '', spaceId: 'space_default' },
+    { id: 4, name: '悠遊卡', category: '必備', note: '記得加值', location: '', spaceId: 'space_default' },
+    { id: 5, name: '耳機', category: '電子產品', note: '', location: '書桌', spaceId: 'space_default' },
+    { id: 6, name: '行動電源', category: '電子產品', note: '出門前確認電量', location: '', spaceId: 'space_default' },
+    { id: 7, name: '充電線', category: '電子產品', note: 'Type-C', location: '', spaceId: 'space_default' },
+    { id: 8, name: '口罩', category: '個人物品', note: '備用放包包內袋', location: '', spaceId: 'space_default' },
+    { id: 9, name: '面紙', category: '個人物品', note: '', location: '', spaceId: 'space_default' },
+    { id: 10, name: '水壺', category: '個人物品', note: '裝滿水', location: '', spaceId: 'space_default' },
+    { id: 11, name: '雨傘', category: '視天氣', note: '', location: '門口', spaceId: 'space_default' },
+    { id: 12, name: '護照', category: '旅行', note: '效期到 2027/05', location: '', spaceId: 'space_default' },
+    { id: 13, name: '換洗衣物', category: '旅行', note: '依天數準備', location: '', spaceId: 'space_default' },
   ],
   lists: [
     { id: 1, name: '日常出門', icon: 'footprints', items: [1, 2, 3, 4, 8, 9], checkedItems: [] },
     { id: 2, name: '上班通勤', icon: 'briefcase', items: [1, 2, 3, 4, 5, 6, 7, 8], checkedItems: [] },
   ],
   activeListId: 1,
-  templates: []
+  templates: [],
+  spaces: [
+    { id: 'space_default', name: '個人空間' },
+    { id: 'space_family', name: '家庭共享空間' }
+  ],
+  activeSpaceId: 'space_default'
 };
 
 // Email encoding for Firebase keys (. → ,)
@@ -73,8 +78,22 @@ export function sanitizeSharedList(sharedList) {
 export function sanitizeData(data) {
   if (!data) return defaultData;
 
+  const spaces = Array.isArray(data.spaces) && data.spaces.length > 0
+    ? data.spaces
+    : defaultData.spaces;
+  const activeSpaceId = data.activeSpaceId || spaces[0].id;
+  const defaultSpaceId = spaces[0].id;
+
+  const itemLibrary = (Array.isArray(data.itemLibrary) ? data.itemLibrary : defaultData.itemLibrary)
+    .map(item => ({
+      ...item,
+      note: item.note || '',
+      location: item.location || '',
+      spaceId: item.spaceId || defaultSpaceId,
+    }));
+
   return {
-    itemLibrary: Array.isArray(data.itemLibrary) ? data.itemLibrary : defaultData.itemLibrary,
+    itemLibrary,
     lists: Array.isArray(data.lists) ? data.lists.map(list => ({
       ...list,
       items: Array.isArray(list.items) ? list.items : [],
@@ -83,7 +102,9 @@ export function sanitizeData(data) {
       ...(list.sharedListId ? { sharedListId: list.sharedListId } : {})
     })) : defaultData.lists,
     activeListId: data.activeListId || defaultData.activeListId,
-    templates: Array.isArray(data.templates) ? data.templates : []
+    templates: Array.isArray(data.templates) ? data.templates : [],
+    spaces,
+    activeSpaceId
   };
 }
 
