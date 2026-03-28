@@ -29,5 +29,10 @@ lerna-debug.log*
 .env
 .env.*
 
+# Test output
+test-results/
+playwright-report/
+test-screenshots/
+
 # Claude Code
 .claude

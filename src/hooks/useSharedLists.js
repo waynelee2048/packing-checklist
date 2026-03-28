@@ -168,13 +168,13 @@ export function useSharedLists(user, data) {
         return;
       }
 
-      const currentItemIds = new Set(currentItems.map(i => i.id));
-      const ownerItemIds = new Set(Array.isArray(list.items) ? list.items : []);
+      const currentItemIds = new Set(currentItems.map(i => String(i.id)));
+      const ownerItemIds = new Set((Array.isArray(list.items) ? list.items : []).map(String));
 
       // 1. Update existing owner items (refresh name/note/category/photo)
       const updatedExisting = currentItems.map(item => {
-        if (!ownerItemIds.has(item.id)) return item; // receiver item — keep as-is
-        const libItem = data.itemLibrary.find(li => li.id === item.id);
+        if (!ownerItemIds.has(String(item.id))) return item; // receiver item — keep as-is
+        const libItem = data.itemLibrary.find(li => String(li.id) === String(item.id));
         if (!libItem) return item; // item removed from library — keep as-is
         const { id, name, category, note, photoURL } = libItem;
         return { id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) };
@@ -182,8 +182,8 @@ export function useSharedLists(user, data) {
 
       // 2. Add owner items that are new (in list.items but not yet in shared)
       const newOwnerItems = (Array.isArray(list.items) ? list.items : [])
-        .filter(id => !currentItemIds.has(id))
-        .map(id => data.itemLibrary.find(item => item.id === id))
+        .filter(id => !currentItemIds.has(String(id)))
+        .map(id => data.itemLibrary.find(item => String(item.id) === String(id)))
         .filter(Boolean)
         .map(({ id, name, category, note, photoURL }) => ({ id, name, category, ...(note != null && { note }), ...(photoURL && { photoURL }) }));
 
