@@ -111,9 +111,10 @@ function SortableItem({ item }) {
   );
 }
 
-function EditChecklistItemModal({ item, onSave, onDelete, onClose }) {
+function EditChecklistItemModal({ item, categories, onSave, onDelete, onClose }) {
   const [name, setName] = useState(item.name);
   const [note, setNote] = useState(item.note || '');
+  const [category, setCategory] = useState(item.category || '');
 
   return (
     <div
@@ -142,6 +143,16 @@ function EditChecklistItemModal({ item, onSave, onDelete, onClose }) {
           className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
         />
 
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+        >
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat || '（無分類）'}</option>
+          ))}
+        </select>
+
         <input
           type="text"
           value={note}
@@ -158,7 +169,7 @@ function EditChecklistItemModal({ item, onSave, onDelete, onClose }) {
             取消
           </button>
           <button
-            onClick={() => onSave(item.id, { name: name.trim() || item.name, note })}
+            onClick={() => onSave(item.id, { name: name.trim() || item.name, category, note })}
             className="flex-1 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
           >
             儲存
@@ -877,6 +888,7 @@ export default function Checklist({
       {editingItem && (
         <EditChecklistItemModal
           item={editingItem}
+          categories={[...new Set(items.map(i => i.category || ''))]}
           onSave={handleEditItem}
           onDelete={(itemId) => {
             setEditingItem(null);
