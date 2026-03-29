@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Inbox, StickyNote, Check, Camera, ChevronDown, ChevronLeft, RotateCcw, CheckCheck, ArrowUpDown, GripVertical, X, Trash2, Loader2, Pencil } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -111,6 +111,64 @@ function SortableItem({ item }) {
   );
 }
 
+function EditChecklistItemModal({ item, onSave, onDelete, onClose }) {
+  const [name, setName] = useState(item.name);
+  const [note, setNote] = useState(item.note || '');
+
+  return (
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-end justify-center z-50"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-t-2xl p-6 safe-bottom animate-slide-up"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-50">編輯物品</div>
+          <button
+            onClick={() => onDelete(item.id)}
+            className="text-sm text-rose-500 px-3 py-1.5 rounded-lg active:bg-rose-50 dark:active:bg-rose-900/30 transition-colors duration-150"
+          >
+            從清單移除
+          </button>
+        </div>
+
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="物品名稱"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-3 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+        />
+
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="備註（選填）"
+          className="w-full px-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl mb-4 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors duration-150"
+        />
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 border border-slate-300 dark:border-slate-600 rounded-xl font-medium text-slate-600 dark:text-slate-300 active:bg-slate-100 dark:active:bg-slate-700 transition-colors duration-150 min-h-[44px]"
+          >
+            取消
+          </button>
+          <button
+            onClick={() => onSave(item.id, { name: name.trim() || item.name, note })}
+            className="flex-1 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-xl font-medium active:bg-indigo-700 dark:active:bg-indigo-600 transition-colors duration-150 min-h-[44px]"
+          >
+            儲存
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Checklist({
   data,
   user,
@@ -132,12 +190,13 @@ export default function Checklist({
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddName, setQuickAddName] = useState('');
   const [quickAddCategory, setQuickAddCategory] = useState(categories[0] || '');
-  const [confirmRemoveItem, setConfirmRemoveItem] = useState(null);
   const [undoToast, setUndoToast] = useState(null);
   const [disposableInput, setDisposableInput] = useState('');
   const [disposablePhoto, setDisposablePhoto] = useState(null);
   const [disposablePhotoPreview, setDisposablePhotoPreview] = useState(null);
   const [confirmDisposableDelete, setConfirmDisposableDelete] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState(null);
   const disposableFileRef = useRef(null);
 
   const { uploadPhoto, deletePhoto, uploading: disposableUploading } = useItemPhoto(user);
@@ -415,6 +474,67 @@ export default function Checklist({
     onSaveData(newData);
   };
 
+  // Edit item (updates itemLibrary for normal, inlineItems for disposable)
+  const handleEditItem = (itemId, updates) => {
+    if (mode === 'shared-with-me') {
+      // Update item in shared list
+      const sharedItems = sharedData?.items || [];
+      const updatedItems = sharedItems.map(i =>
+        String(i.id) === String(itemId) ? { ...i, ...updates } : i
+      );
+      shared.updateSharedListItems(activeSharedListId, updatedItems);
+    } else if (isDisposable) {
+      const newData = {
+        ...data,
+        lists: data.lists.map(l => {
+          if (l.id !== data.activeListId) return l;
+          return {
+            ...l,
+            inlineItems: (l.inlineItems || []).map(i =>
+              i.id === itemId ? { ...i, ...updates } : i
+            )
+          };
+        })
+      };
+      onSaveData(newData);
+    } else {
+      // Normal/own-shared: update itemLibrary
+      const newData = {
+        ...data,
+        itemLibrary: data.itemLibrary.map(item =>
+          item.id === itemId ? { ...item, ...updates } : item
+        )
+      };
+      onSaveData(newData);
+    }
+    setEditingItem(null);
+  };
+
+  // Remove item from current list (not from library)
+  const handleRemoveItemFromList = (itemId) => {
+    if (mode === 'shared-with-me') {
+      shared.removeSharedItem(activeSharedListId, itemId);
+    } else if (isDisposable) {
+      removeDisposableItem(itemId);
+    } else {
+      // Normal/own-shared: remove from list.items only (keep in itemLibrary)
+      const newData = {
+        ...data,
+        lists: data.lists.map(l => {
+          if (l.id !== data.activeListId) return l;
+          return {
+            ...l,
+            items: (l.items || []).filter(id => id !== itemId),
+            checkedItems: (l.checkedItems || []).filter(id => id !== itemId)
+          };
+        })
+      };
+      onSaveData(newData);
+    }
+    setEditingItem(null);
+    setConfirmDeleteItem(null);
+  };
+
   // Disposable: delete the entire list
   const deleteDisposableList = () => {
     const newLists = data.lists.filter(l => l.id !== data.activeListId);
@@ -536,28 +656,16 @@ export default function Checklist({
               <ChevronDown size={18} className={`transition-transform duration-200 ${isNoteExpanded ? 'rotate-180' : ''}`} />
             </button>
           )}
-          {mode === 'shared-with-me' && canEdit && (
+          {canEdit && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setConfirmRemoveItem(item.id);
+                setEditingItem(item);
               }}
-              className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
-              aria-label="移除物品"
+              className="p-2 text-slate-400 active:text-indigo-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
+              aria-label="編輯物品"
             >
-              <Trash2 size={16} />
-            </button>
-          )}
-          {isDisposable && mode !== 'shared-with-me' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                removeDisposableItem(item.id);
-              }}
-              className="p-2 text-slate-400 active:text-rose-500 rounded-lg min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors duration-150"
-              aria-label="移除項目"
-            >
-              <Trash2 size={16} />
+              <Pencil size={16} />
             </button>
           )}
         </div>
@@ -765,15 +873,25 @@ export default function Checklist({
       {/* Celebration overlay */}
       {showCelebration && <CelebrationOverlay />}
 
-      {/* Confirm remove item dialog */}
-      {confirmRemoveItem !== null && (
-        <ConfirmDialog
-          message="確定要移除此物品？"
-          onConfirm={() => {
-            shared.removeSharedItem(activeSharedListId, confirmRemoveItem);
-            setConfirmRemoveItem(null);
+      {/* Edit item modal */}
+      {editingItem && (
+        <EditChecklistItemModal
+          item={editingItem}
+          onSave={handleEditItem}
+          onDelete={(itemId) => {
+            setEditingItem(null);
+            setConfirmDeleteItem(itemId);
           }}
-          onCancel={() => setConfirmRemoveItem(null)}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
+
+      {/* Confirm delete item dialog */}
+      {confirmDeleteItem !== null && (
+        <ConfirmDialog
+          message="確定要從清單移除此物品？"
+          onConfirm={() => handleRemoveItemFromList(confirmDeleteItem)}
+          onCancel={() => setConfirmDeleteItem(null)}
         />
       )}
 

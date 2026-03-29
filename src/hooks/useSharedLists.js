@@ -309,6 +309,12 @@ export function useSharedLists(user, data) {
     await update(ref(db), updates);
   }, []);
 
+  // Update items array on shared list
+  const updateSharedListItems = useCallback(async (sharedListId, newItems) => {
+    const itemsRef = ref(db, `sharedLists/${sharedListId}/items`);
+    await set(itemsRef, newItems.map(stripUndefined));
+  }, []);
+
   // Toggle check on shared list
   const toggleSharedCheck = useCallback(async (sharedListId, itemId) => {
     const checkedRef = ref(db, `sharedLists/${sharedListId}/checkedItems`);
@@ -345,6 +351,7 @@ export function useSharedLists(user, data) {
     setUserPermission,
     addSharedItem,
     removeSharedItem,
+    updateSharedListItems,
     toggleSharedCheck,
     resetSharedChecks,
     checkAllShared
